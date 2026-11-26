@@ -1,0 +1,380 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,graphicx,booktabs,enumitem,listings,float}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+\setlist{topsep=2pt,itemsep=2pt,parsep=0pt}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,breaklines=true,xleftmargin=1em}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\ip}[2]{\langle #1,#2\rangle}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\Var}{Var}
+\newcommand{\Gh}{\widehat G}
+
+\begin{document}
+{\small STAT 310 / Project notes \hfill November 25, 2026}
+
+\begin{center}
+{\Large\textbf{Variance reduction for low-rank evolution strategies:}}\\[0.3em]
+{\large\textbf{curvature noise, perturbation radius, and factor design}}
+\end{center}
+
+These notes extend our draft \emph{Quadratic Stability and Excess Risk of EGGROLL} [D]. The draft shows that, on quadratics, the perturbation law enters every bound only through one number $\kappa$. Here we ask how to make the variance of the gradient estimator smaller, and answer three questions.
+\begin{enumerate}
+\item \textbf{How to choose $\sigma$? Is a small $\sigma$ always better?} No. For the antithetic estimator on a quadratic, $\sigma$ does not matter. For a one-sided estimator with a leave-one-out (LOO) baseline, the curvature adds a variance term proportional to $\sigma^2$ that does not vanish with the gradient (Theorem~\ref{thm:mse}). LOO beats antithetic only below an explicit critical radius, and with noisy evaluations there is an explicit optimal radius (Corollary~\ref{cor:sigma}).
+\item \textbf{Can shrinkage reduce the variance?} A scalar shrinkage is the same as a stepsize choice. Shrinkage toward the previous estimate is a randomized Kaczmarz method and helps only if the gradient moves slowly (Proposition~\ref{prop:shrink}).
+\item \textbf{$AB^\top$ is not Gaussian. How to choose $A,B$ better?} Orthonormal factors remove the whole rank penalty in the directional variance and the isotropic part of the curvature noise (Propositions~\ref{prop:structure}--\ref{prop:closed}). For the directional variance, no design can beat $d/N$, and orthogonal rank-one frames achieve it (Theorem~\ref{thm:lower}). The rank penalty of Gaussian factors is tiny in the directional term [2] but is a factor of order $(m+n)/r$ in the curvature term (Corollary~\ref{cor:rank}).
+\end{enumerate}
+All formulas below are exact for quadratics and were checked by Monte Carlo (Section~\ref{sec:sim}). The main predictions (a critical radius that shrinks with the gradient, an observable even--odd criterion for choosing between the two estimators, and a rank effect for LOO but not for antithetic sampling) are also seen on a small neural network (Section~\ref{sec:nn}). A training experiment with an even--odd switching rule did \emph{not} improve over the better fixed estimator (Section~\ref{sec:train}); it shows that the curvature-weighted second moment, not the mean squared error, is what limits ES training.
+
+\section{Setup}
+Let $W\in\R^{m\times n}$, $d=mn$, with the Frobenius inner product $\ip{\cdot}{\cdot}$ and norm $\|\cdot\|$. The loss is
+\[
+f(W)=\tfrac12\ip{W}{HW}+\ip{C}{W}+c,\qquad g=\nabla f(W)=HW+C,
+\]
+where $H$ is a self-adjoint linear operator on $\R^{m\times n}$. Write $\tau=\tr H$, $\|H\|_{HS}$ for its Hilbert--Schmidt norm, and $H_0=H-\frac{\tau}{d}I$ for its traceless part. The \emph{Kronecker case} is $H(W)=LWR$ with symmetric $L\in\R^{m\times m}$, $R\in\R^{n\times n}$; then, with $\ell_k=\tr L^k$ and $\rho_k=\tr R^k$, we have $\tau=\ell_1\rho_1$ and $\|H\|_{HS}^2=\ell_2\rho_2$.
+
+\paragraph{Designs.} A \emph{design} is the law of a random perturbation $E\in\R^{m\times n}$. We assume
+\begin{equation}\tag{D}
+Q_AEQ_B^\top\overset{d}{=}E\ \text{ for all orthogonal }Q_A,Q_B,\qquad \E\|E\|^2=d,\qquad \E\|E\|^6<\infty .
+\end{equation}
+We use four designs: (i) \emph{dense Gaussian}, with i.i.d.\ $N(0,1)$ entries; (ii) \emph{dense sphere}, uniform on $\{\|E\|^2=d\}$; (iii) \emph{Gaussian product} of rank $r$, $E=AB^\top/\sqrt r$ with i.i.d.\ $N(0,1)$ entries in $A\in\R^{m\times r}$, $B\in\R^{n\times r}$, as in EGGROLL [1]; (iv) \emph{orthonormal product} of rank $r\le\min(m,n)$, $E=\sqrt{d/r}\,Q_AQ_B^\top$ with independent Haar matrices $Q_A,Q_B$ with orthonormal columns. Design (iv) is EGGROLL with $A=\sqrt m\,Q_A$ and $B=\sqrt n\,Q_B$; for $r=1$ it only normalizes the two vectors.
+
+\begin{lemma}[Moments under (D)]\label{lem:moments}
+For every $U\in\R^{m\times n}$: (i) $E\overset{d}{=}-E$; (ii) $\E[\ip{E}{U}E]=U$; (iii) $\E[\|E\|^2\ip{E}{U}E]=c_4U$ with $c_4=\E\|E\|^4/d$. Moreover $\Var(\|E\|^2)=d(c_4-d)$, so $c_4\ge d$ with equality if and only if $\|E\|^2=d$ almost surely.
+\end{lemma}
+\begin{proof}
+(i) Take $Q_A=-I$, $Q_B=I$. For (ii)--(iii), let $T(U)=\E[\varphi(E)\ip{E}{U}E]$ with $\varphi\equiv1$ or $\varphi(E)=\|E\|^2$. By (D), $T(Q_AUQ_B^\top)=Q_AT(U)Q_B^\top$. Taking $Q_A,Q_B$ to be diagonal sign matrices shows that $\ip{e_ke_l^\top}{T(e_ie_j^\top)}=0$ unless $(k,l)=(i,j)$, and taking permutation matrices shows that the diagonal entries are equal. Hence $T=(\tr T/d)I$, with $\tr T=\E[\varphi(E)\|E\|^2]$. The variance formula follows from $\E\|E\|^4=dc_4$.
+\end{proof}
+The values of $c_4$ are: $d+2$ for (i); $d$ for (ii) and (iv); and $d+2+2(m+n+1)/r$ for (iii) [2, D]. For (iv) this holds because $\|E\|^2=\frac dr\tr(Q_B^\top Q_BQ_A^\top Q_A)=d$. If only $A$ is orthonormal and $B$ is Gaussian, the conditional identity in [D, Sec.~3] gives $c_4=d+2m/r$.
+
+\paragraph{Estimators.} Let $E_1,E_2,\dots$ be i.i.d.\ from a design, and suppose each evaluation returns $f$ plus independent noise with mean $0$ and variance $s^2$ ($s=0$ if all members use the same observation, as in [1, D]). With $N$ antithetic pairs, or $M$ one-sided evaluations,
+\[
+\Gh_A=\frac1N\sum_{j=1}^N\frac{f(W+\sigma E_j)-f(W-\sigma E_j)}{2\sigma}E_j,\qquad
+\Gh_L=\frac1M\sum_{j=1}^M\frac{f(W+\sigma E_j)-b_j}{\sigma}E_j,
+\]
+where $b_j=\frac1{M-1}\sum_{k\ne j}f(W+\sigma E_k)$ is the LOO baseline of LOO-ROLL [2] (noise terms are omitted in the display). At equal cost, $M=2N$. For $q=\ip{E}{HE}$, note $\E q=\tau$, and define the two \emph{curvature moments}
+\[
+V_q=\Var(q),\qquad C_q=\E\big[(q-\tau)^2\|E\|^2\big].
+\]
+
+\section{Exact risk of the two estimators}
+\begin{theorem}[Exact mean squared error]\label{thm:mse}
+Assume (D) and $M\ge2$. For every $\sigma>0$ both estimators are unbiased, and
+\begin{align}
+\E\|\Gh_A-g\|^2&=\frac{c_4-1}{N}\|g\|^2+\frac{s^2d}{2\sigma^2N},\label{eq:anti}\\
+\E\|\Gh_L-g\|^2&=(\kappa_L-1)\|g\|^2+\frac{\sigma^2}{4}\Gamma_M+\frac{s^2d}{\sigma^2(M-1)},\label{eq:loo}
+\end{align}
+where
+\[
+\kappa_L=1+\frac{c_4-1}{M}+\frac{d+1}{M(M-1)},\qquad \Gamma_M=\frac{C_q}{M}+\frac{d\,V_q}{M(M-1)} .
+\]
+\end{theorem}
+So LOO halves the directional term (the first term) at equal cost, as in the affine analysis of [2], but it pays the \emph{curvature noise} $\frac{\sigma^2}{4}\Gamma_M$, which does not depend on $g$.
+
+\begin{lemma}\label{lem:ustat}
+Let $(x_j,E_j)_{j\le M}$ be i.i.d.\ with $\E x_j=0$, $\E E_j=0$, $\E[x_jE_j]=g$, $\E\|E_j\|^2=d$, $s_2=\E x_j^2$ and $v_2=\E[x_j^2\|E_j\|^2]$. Then $\Gh=\frac1{M-1}\sum_j(x_j-\bar x)E_j$ satisfies $\E\Gh=g$ and
+\[
+\E\|\Gh-g\|^2=\frac{v_2-\|g\|^2}{M}+\frac{s_2d+\|g\|^2}{M(M-1)} .
+\]
+\end{lemma}
+\begin{proof}
+Let $S_V=\sum_jx_jE_j$, $S_x=\sum_jx_j$, $S_E=\sum_jE_j$, so $(M-1)\Gh=S_V-S_xS_E/M$. Expanding the sums and keeping the index patterns with nonzero mean,
+\begin{align*}
+\E\|S_V\|^2&=Mv_2+M(M-1)\|g\|^2,\qquad \E\ip{S_V}{S_xS_E}=Mv_2+M(M-1)\|g\|^2,\\
+\E[S_x^2\|S_E\|^2]&=Mv_2+M(M-1)s_2d+2M(M-1)\|g\|^2 .
+\end{align*}
+Hence $\E\|S_V-S_xS_E/M\|^2=\frac{(M-1)^2}{M}v_2+\frac{(M-1)(M^2-2M+2)}{M}\|g\|^2+\frac{M-1}{M}s_2d$. Dividing by $(M-1)^2$ and subtracting $\|g\|^2$ gives the claim; $\E\Gh=g$ follows in the same way.
+\end{proof}
+\begin{proof}[Proof of Theorem~\ref{thm:mse}]
+For a quadratic, $f(W\pm\sigma E)=f(W)\pm\sigma\ip{g}{E}+\frac{\sigma^2}2\ip{E}{HE}$. Write $a_j=\ip{g}{E_j}$ and $q_j=\ip{E_j}{HE_j}$.
+
+\emph{Antithetic.} The difference quotient equals $a_j+\nu_j$, where $\nu_j$ is noise with variance $s^2/(2\sigma^2)$. By Lemma~\ref{lem:moments}, $\E[a_jE_j]=g$ and $\E[a_j^2\|E_j\|^2]=c_4\|g\|^2$, so $\E\|\Gh_A\|^2=\frac1N\big(c_4\|g\|^2+\frac{s^2d}{2\sigma^2}\big)+\frac{N-1}{N}\|g\|^2$.
+
+\emph{LOO.} Let $y_j$ be the $j$-th observed value. Since $y_j-b_j=\frac{M}{M-1}(y_j-\bar y)$, we have $\Gh_L=\frac1{M-1}\sum_j(x_j-\bar x)E_j$ with $x_j=a_j+\frac\sigma2(q_j-\tau)+\xi_j/\sigma$. By symmetry of $E$, $\E[(q_j-\tau)E_j]=0$ and $\E[a_j(q_j-\tau)]=\E[a_j(q_j-\tau)\|E_j\|^2]=0$. So $\E[x_jE_j]=g$,
+\[
+s_2=\|g\|^2+\tfrac{\sigma^2}4V_q+\tfrac{s^2}{\sigma^2},\qquad v_2=c_4\|g\|^2+\tfrac{\sigma^2}4C_q+\tfrac{s^2d}{\sigma^2},
+\]
+and Lemma~\ref{lem:ustat} gives \eqref{eq:loo}.
+\end{proof}
+
+\section{Where the curvature noise comes from}
+\begin{proposition}[Traceless curvature and norm fluctuation]\label{prop:structure}
+For every design,
+\[
+q-\tau=\ip{E}{H_0E}+\frac{\tau}{d}\big(\|E\|^2-d\big).
+\]
+(a) If the design has fixed norm ($c_4=d$), then $C_q=d\,V_q$, and both depend on $H$ only through $H_0$; in particular $\Gamma_M=0$ when $H=hI$. (b) If $H=hI$, then $V_q=h^2d(c_4-d)$ and $C_q=h^2\big(\E\|E\|^6-2d^2c_4+d^3\big)$.
+\end{proposition}
+\begin{proof}
+The identity is $\ip{E}{HE}=\ip{E}{H_0E}+\frac\tau d\|E\|^2$. (a) and (b) follow from it and Lemma~\ref{lem:moments}.
+\end{proof}
+So the same quantity $c_4-d$, the variance of $\|E\|^2$ up to the factor $d$, drives both the rank penalty in the directional variance and the isotropic part of the curvature noise.
+
+\begin{proposition}[Closed forms]\label{prop:closed}
+(a) For any $H$: dense Gaussian has $V_q=2\|H\|_{HS}^2$ and $C_q=2(d+4)\|H\|_{HS}^2$; dense sphere has $V_q=\frac{2d}{d+2}\|H_0\|_{HS}^2$ and $C_q=dV_q$.
+
+(b) In the Kronecker case with rank one, let $p=(\ell_1^2+2\ell_2)(\rho_1^2+2\rho_2)$. Then
+\begin{align*}
+\text{Gaussian }ab^\top:&\quad c_4=(m+2)(n+2),\quad V_q=p-\tau^2,\\
+&\quad C_q=(m+4)(n+4)p-\big(2(m+2)(n+2)-d\big)\tau^2;\\
+\text{normalized }ab^\top:&\quad c_4=d,\quad V_q=\frac{d\,p}{(m+2)(n+2)}-\tau^2,\quad C_q=dV_q .
+\end{align*}
+
+(c) In the Kronecker case with rank $r$, the Gaussian product has
+\[
+V_q=2\ell_2\rho_2+\frac2r\big(\ell_1^2\rho_2+\ell_2\rho_1^2+\ell_2\rho_2\big),
+\]
+and the orthonormal product has $C_q=dV_q$ with the explicit $V_q$ of Appendix~\ref{app:closed}.
+\end{proposition}
+Proofs are in Appendix~\ref{app:closed}. They use only the moments of Gaussian quadratic forms.
+
+\begin{corollary}[Two rank penalties]\label{cor:rank}
+Let $\mathrm{erk}(L)=\ell_1^2/\ell_2\in[1,m]$. For Gaussian products in the Kronecker case,
+\[
+\frac{V_q(r)}{V_q(\infty)}=1+\frac{\mathrm{erk}(L)+\mathrm{erk}(R)+1}{r},\qquad\text{while}\qquad\frac{c_4(r)-1}{c_4(\infty)-1}=1+\frac{2(m+n+1)}{r(d+1)}\ \ [2].
+\]
+For $H=hI$ and $m=n=w$ the first penalty is $(2w+1)/r$ and the second is about $4/(rw)$. For rank one, $C_q=h^2w^2(4w^3+44w^2+96w+64)$, against $2h^2w^2(w^2+4)$ for the dense Gaussian design.
+\end{corollary}
+At width $w=4096$ and rank one, the directional penalty is $0.098\%$ [2], but the curvature variance is about $8200$ times the dense value when the curvature is isotropic. Orthonormal factors remove this part completely (Proposition~\ref{prop:structure}(a)); the anisotropic part remains and decreases with $r$ (Figure~\ref{fig:rank}).
+
+\section{Choosing the radius}
+\begin{corollary}[Critical and optimal radius]\label{cor:sigma}
+Let $M=2N$.
+
+(a) If $s=0$, then $\E\|\Gh_L-g\|^2<\E\|\Gh_A-g\|^2$ if and only if
+\[
+\sigma^2<\sigma_*^2:=\frac{4\|g\|^2\big[(c_4-1)-\frac{d+1}{M-1}\big]}{C_q+\frac{d}{M-1}V_q}.
+\]
+In particular, for any fixed $\sigma$, antithetic sampling is better once $\|g\|$ is small enough.
+
+(b) If $s>0$, the LOO risk is minimized at $\sigma_{\rm opt}^4=\dfrac{4s^2d}{(M-1)\Gamma_M}$, where the two $\sigma$-dependent terms sum to $s\sqrt{d\,\Gamma_M/(M-1)}$. The antithetic risk \eqref{eq:anti} is decreasing in $\sigma$ on a quadratic.
+
+(c) For $H=hI$, $m=n=w$ and large $M$: $\sigma_*^2\approx2\|g\|^2/(h^2w^2)$ for dense Gaussian, $\sigma_*^2\approx\|g\|^2/(h^2w^3)$ for Gaussian $ab^\top$, and $\sigma_*=\infty$ for fixed-norm designs.
+\end{corollary}
+\begin{proof}
+Compare \eqref{eq:anti} with $N=M/2$ and \eqref{eq:loo}; for (b) minimize $\frac{\sigma^2}4\Gamma_M+\frac{s^2d}{\sigma^2(M-1)}$; for (c) use Proposition~\ref{prop:structure} and Corollary~\ref{cor:rank}.
+\end{proof}
+\begin{corollary}[Even--odd criterion]\label{cor:evenodd}
+Let $s=0$ and take one antithetic pair $f_\pm=f(W\pm\sigma E)$. Its odd part $o=\frac12(f_+-f_-)=\sigma\ip{g}{E}$ and even part $e=\frac12(f_++f_-)-f(W)=\frac{\sigma^2}2\ip{E}{HE}$ satisfy $\Var(o)=\sigma^2\|g\|^2$ and $\Var(e)=\frac{\sigma^4}4V_q$. For fixed-norm designs and $M=2N$,
+\[
+\E\|\Gh_L-g\|^2<\E\|\Gh_A-g\|^2\quad\Longleftrightarrow\quad\frac{\Var(e)}{\Var(o)}<1-\frac2M-\frac1d .
+\]
+For a general design the threshold on the right is $\big[(c_4-1)-\frac{d+1}{M-1}\big]V_q\big/\big[C_q+\frac{d}{M-1}V_q\big]$.
+\end{corollary}
+\begin{proof}
+Insert $\sigma^2V_q/4=\|g\|^2\Var(e)/\Var(o)$ into Corollary~\ref{cor:sigma}(a); for fixed-norm designs use $c_4=d$ and $C_q=dV_q$.
+\end{proof}
+Both variances can be estimated from the losses of a few antithetic pairs, without knowing $g$ or $H$. This gives a simple rule: \emph{use one-sided evaluations while the even part of the population losses fluctuates less than the odd part, and otherwise use antithetic pairs or reduce $\sigma$}. Since the ratio is proportional to $\sigma^2$, the same statistic gives the radius: $\sigma_*^2=\sigma^2(1-\frac2M-\frac1d)\Var(o)/\Var(e)$.
+
+So a small $\sigma$ is not always better. With exact differences ($s=0$) the antithetic estimator does not depend on $\sigma$; the LOO estimator prefers a small $\sigma$ but must keep $\sigma\lesssim\|g\|/\sqrt{C_q}$; with noisy evaluations the best radius balances curvature against noise. For non-quadratic losses there is in addition a bias of order $\sigma^2/r$ [2], which we do not treat.
+
+\section{Choosing the factors: a lower bound and an optimal design}
+\begin{theorem}[Directional variance]\label{thm:lower}
+(a) Let $E_1,\dots,E_N$ and $V_1,\dots,V_N$ be any random matrices, $N\le d$, and $\Gh=\sum_j\ip{E_j}{g}V_j$. If $\E\Gh=g$ for all $g$, then
+\[
+\sup_{\|g\|=1}\E\|\Gh\|^2\ \ge\ \frac dN,\qquad\text{so}\qquad \sup_{\|g\|=1}\E\|\Gh-g\|^2\ \ge\ \frac dN-1 .
+\]
+(b) Let $Q_A\in O(m)$, $Q_B\in O(n)$ be independent Haar matrices with columns $q^A_i,q^B_k$, choose $N$ distinct pairs $(i_j,k_j)$, and set $E_j=\sqrt d\,q^A_{i_j}(q^B_{k_j})^\top$. Then $\Gh=\frac1N\sum_j\ip{E_j}{g}E_j$ is unbiased and $\E\|\Gh-g\|^2=(\frac dN-1)\|g\|^2$ for every $g$.
+
+(c) For i.i.d.\ designs under (D), $\E\|\Gh_A-g\|^2=\frac{c_4-1}{N}\|g\|^2\ge\frac{d-1}{N}\|g\|^2$, with equality exactly for fixed-norm designs.
+\end{theorem}
+\begin{proof}
+(a) Let $P(U)=\sum_j\ip{E_j}{U}V_j$, so $\Gh=Pg$, $\mathrm{rank}\,P\le N$ and $\E P=I$. For an orthonormal basis $(U_k)$, $\sum_k\E\|PU_k\|^2=\E\|P\|_{HS}^2\ge\E(\tr P)^2/N\ge(\E\tr P)^2/N=d^2/N$, because $|\tr P|\le\sqrt{\mathrm{rank}\,P}\,\|P\|_{HS}$. The supremum is at least the average over $k$. (b) The $E_j$ are orthogonal with $\|E_j\|^2=d$, so $P=\frac dN\Pi$ with $\Pi$ the orthogonal projector onto their span. Each $E_j$ alone is a normalized rank-one perturbation, so $\E P=I$ and $\E\Pi=\frac NdI$. Then $\E\|Pg\|^2=\frac{d^2}{N^2}\E\ip{g}{\Pi g}=\frac dN\|g\|^2$. (c) is \eqref{eq:anti} with Lemma~\ref{lem:moments}.
+\end{proof}
+The frames in (b) keep the rank-one structure that makes EGGROLL cheap, and they are minimax optimal. When $N\ll d$, as at LLM scale, all three numbers $\frac{c_4-1}N$, $\frac{d-1}N$ and $\frac dN-1$ are close: the directional variance cannot be reduced much by a better isotropic design. The gains are in the curvature term (Sections 3--4).
+
+\paragraph{Relation to the draft.} The proofs in [D] use the perturbations only through $\E P_t=I$ and $\E P_t^2=\kappa I$. Hence Theorems 1--3 of [D] hold for every design above with $\kappa=1+\frac{c_4-1}N$ (i.i.d.) or $\kappa=\frac dN$ (frames). For example, replacing Gaussian by orthonormal factors lowers the exact one-step gap [D, Eq.~(2.9)] by $\frac{G^2(1-\mu)\eta^2}{4sN}\big(1+\frac{m+n+1}{r}\big)$.
+
+\section{Consequences for evolution-strategy descent}
+\begin{theorem}[Linear convergence and the noise floor]\label{thm:descent}
+Let $\mu I\preceq H\preceq\beta I$ with minimizer $W^\star$, and run $W_{t+1}=W_t-\eta\Gh_t$ with fresh i.i.d.\ directions. Put $(\kappa,v)=\big(1+\frac{c_4-1}N,\ \frac{s^2d}{2\sigma^2N}\big)$ for $\Gh_A$ and $(\kappa,v)=\big(\kappa_L,\ \frac{\sigma^2}4\Gamma_M+\frac{s^2d}{\sigma^2(M-1)}\big)$ for $\Gh_L$. If $\eta\le1/(\beta\kappa)$, then
+\[
+\E\|W_T-W^\star\|^2\le(1-\eta\mu)^T\|W_0-W^\star\|^2+\frac{\eta v}{\mu}.
+\]
+If $H=hI$, then exactly $\E\|W_T-W^\star\|^2=\rho^T\|W_0-W^\star\|^2+\frac{\eta v}{h(2-\eta h\kappa)}(1-\rho^T)$ with $\rho=1-2\eta h+\eta^2h^2\kappa$; for $\eta=1/(h\kappa)$ this is $\rho=1-1/\kappa$ with floor $v/(h^2\kappa)$.
+\end{theorem}
+\begin{proof}
+By Theorem~\ref{thm:mse}, $\E[\Gh_t\mid W_t]=g_t$ and $\E[\|\Gh_t\|^2\mid W_t]=\kappa\|g_t\|^2+v$, where $v$ does not depend on $W_t$ because $H$ is constant. With $e_t=W_t-W^\star$ and $g_t=He_t$,
+\[
+\E[\|e_{t+1}\|^2\mid W_t]=\|e_t\|^2-2\eta\ip{e_t}{He_t}+\eta^2\kappa\|He_t\|^2+\eta^2v .
+\]
+Use $\|He_t\|^2\le\beta\ip{e_t}{He_t}$, $\eta\beta\kappa\le1$ and $\ip{e_t}{He_t}\ge\mu\|e_t\|^2$, then iterate. For $H=hI$ the display is a scalar linear recursion.
+\end{proof}
+With $s=0$: antithetic ES converges linearly to $W^\star$; LOO contracts about twice as fast ($\kappa_L-1\approx\frac12(\kappa_A-1)$) but stops at a floor proportional to $\sigma^2\Gamma_M$; with fixed-norm factors and isotropic curvature the floor is zero, so LOO keeps the faster rate. If the radius is reduced so that $\frac{\sigma_t^2}{4}\Gamma_M\le\epsilon\|g_t\|^2$, the same proof gives linear convergence with $\kappa_L+\epsilon$ in place of $\kappa_L$.
+
+\section{Shrinkage}
+\begin{proposition}\label{prop:shrink}
+Let $P_t$ be i.i.d.\ random operators with $\E P_t=I$ and $\E P_t^2=\kappa I$ (for example $P_t=\frac1N\sum_jE_{t,j}\otimes E_{t,j}$).
+
+(a) \emph{Scalar shrinkage.} $\min_a\E\|aP_tg-g\|^2=(1-\frac1\kappa)\|g\|^2$, attained at $a=1/\kappa$. This is the same as the one-step contraction of ES descent on $H=hI$ at its best stepsize $\eta=1/(h\kappa)$.
+
+(b) \emph{Shrinkage toward the previous estimate.} For a fixed $g$ let $m_{t+1}=m_t+aP_t(g-m_t)$, which needs only the directional derivatives $\ip{E_{t,j}}{g}$. Then $\E\|g-m_{t+1}\|^2=(1-2a+a^2\kappa)\E\|g-m_t\|^2$, and $a=1/\kappa$ gives the factor $1-1/\kappa$ per step. For the frames of Theorem~\ref{thm:lower}(b), $a=N/d$ gives $m_{t+1}=m_t+\Pi_t(g-m_t)$, a randomized block Kaczmarz step [4], with factor $1-N/d$.
+
+(c) \emph{Moving gradient.} If $g_t$ changes by at most $\Delta$ per step in $L^2$, then $\limsup_t\|g_t-m_t\|_{L^2}\le\Delta/(1-\sqrt{1-1/\kappa})\le2\kappa\Delta$.
+\end{proposition}
+\begin{proof}
+(a) $\E\|aP_tg-g\|^2=(a^2\kappa-2a+1)\|g\|^2$. (b) $g-m_{t+1}=(I-aP_t)(g-m_t)$ and $P_t$ is independent of $m_t$. (c) $\|g_{t+1}-m_{t+1}\|_{L^2}\le\sqrt{1-1/\kappa}\,\|g_t-m_t\|_{L^2}+\Delta$ and $1-\sqrt{1-x}\ge x/2$.
+\end{proof}
+\begin{remark}[A negative result]
+A scalar shrinkage gives nothing beyond the stepsize condition $\eta\le1/(\beta\kappa)$ of [D]. The tracker in (b) is useful when $\kappa\Delta\ll\|g\|$. For ES descent on $H=hI$ driven by $m_{t+1}$, the triple $(\E\|g_t\|^2,\E\|g_t-m_t\|^2,\E\ip{g_t}{g_t-m_t})$ follows an exact linear recursion; its best spectral radius over $(\eta,a)$, computed numerically, is $0.8165,\ 0.9487,\ 0.9950$ for $\kappa=3,10,100$, that is $\sqrt{1-1/\kappa}$. This is slower than the rate $1-1/\kappa$ of plain ES descent, so temporal shrinkage does not help on a noise-free isotropic quadratic.
+\end{remark}
+
+\section{Simulations}\label{sec:sim}
+All experiments use exact quadratic evaluations, so the only randomness is the design. Unless stated, $m=8$, $n=6$ ($d=48$), $L$ and $R$ are diagonal with eigenvalues evenly spaced in $[0.4,1.6]$ and $[0.3,1.2]$, and $\|g\|=1$. Code is in Appendix~\ref{app:code}.
+
+\begin{table}[H]
+\centering\small
+\caption{Monte Carlo (MC) and Theorem~\ref{thm:mse} for $m=6$, $n=4$, $M=16$ evaluations ($N=8$ pairs), $10^5$ repetitions. The last column is the critical radius of Corollary~\ref{cor:sigma}(a).}
+\begin{tabular}{lccccccccc}
+\toprule
+ & \multicolumn{2}{c}{LOO, $\sigma=0.1$} & \multicolumn{2}{c}{LOO, $\sigma=0.4$} & \multicolumn{2}{c}{LOO, $\sigma=0.4$, $s=0.2$} & \multicolumn{2}{c}{antithetic} & \\
+design & MC & theory & MC & theory & MC & theory & MC & theory & $\sigma_*$\\
+\midrule
+dense Gaussian & 1.84 & 1.84 & 4.47 & 4.47 & 4.88 & 4.87 & 3.13 & 3.12 & 0.289\\
+dense sphere & 1.58 & 1.58 & 2.18 & 2.18 & 2.59 & 2.58 & 2.88 & 2.88 & 0.577\\
+Gaussian $ab^\top$ & 8.51 & 8.50 & 88.87 & 90.35 & 91.68 & 90.75 & 5.82 & 5.88 & 0.072\\
+normalized $ab^\top$ & 1.68 & 1.69 & 3.85 & 3.85 & 4.25 & 4.25 & 2.87 & 2.88 & 0.304\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.47\textwidth]{fig_design.pdf}\hfill
+\includegraphics[width=0.47\textwidth]{fig_sigma.pdf}
+\caption{Left: second moment of the antithetic estimator against the number of directions (lines: theory; markers: MC). Orthogonal rank-one frames meet the lower bound $d/N$ of Theorem~\ref{thm:lower}. Right: LOO risk against the radius for $M=32$ (lines: Theorem~\ref{thm:mse}; dots: MC). Dotted lines are the antithetic risks at equal cost and crosses mark $\sigma_*$.}\label{fig:design}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_rank.pdf}
+\caption{Left: curvature variance $V_q$ relative to the dense Gaussian value, against the rank (lines: Proposition~\ref{prop:closed}(c); dots: MC). Right: the two rank penalties of Corollary~\ref{cor:rank} for $H=hI$ and width $w$: the curvature penalty grows like $2w/r$ while the directional penalty decays like $4/(rw)$.}\label{fig:rank}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_descent.pdf}
+\caption{ES descent with $32$ evaluations per step, averaged over 300 runs, $\sigma=0.01$. Left: $H=I$; dotted lines are the exact recursion of Theorem~\ref{thm:descent}. LOO with Gaussian factors stops at the predicted floor, LOO with normalized factors has no floor and is faster than antithetic. Right: anisotropic Kronecker curvature with eigenvalues of $L,R$ in $[0.5,1.5]$; dashed lines are the bound $\eta v/\mu$.}\label{fig:descent}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.47\textwidth]{fig_track.pdf}
+\caption{Tracking a fixed gradient with $N=8$ directions per step (Proposition~\ref{prop:shrink}(b)). Lines: theory; markers: MC over 2000 runs. A fresh estimate has relative error $\kappa-1\approx5.9$ at every step.}\label{fig:track}
+\end{figure}
+
+\section{A check on a neural network}\label{sec:nn}
+The theory is exact only for quadratics, so we test its predictions on a small non-quadratic problem: a $64$--$64$--$10$ tanh network with cross-entropy loss on 128 images of the \texttt{digits} data set. We perturb the first weight matrix ($m=n=64$, $d=4096$) and use the same batch for all members. The true gradient comes from backpropagation. Table~\ref{tab:nn} reports the relative error $\E\|\Gh-g\|^2/\|g\|^2$ with $M=64$ evaluations (150 repetitions), at initialization and after 300 gradient steps. The curvature variance $V_q$ is estimated from second differences, and $\sigma_*$ is then computed from Corollary~\ref{cor:sigma}.
+
+\begin{table}[H]
+\centering\small
+\caption{Neural-network check. LOO columns: relative error at three radii. ``Anti.'' is the antithetic estimator at $\sigma=0.01$. The ratio is $\Var(e)/\Var(o)=\sigma^2V_q/(4\|g\|^2)$ at $\sigma=0.03$.}\label{tab:nn}
+\begin{tabular}{@{}llcccccc@{}}
+\toprule
+ & factors & LOO, $0.003$ & LOO, $0.03$ & LOO, $0.1$ & Anti. & $\sigma_*$ & ratio\\
+\midrule
+initialization & Gaussian, $r=1$ & 69.8 & 65.8 & 60.9 & 139.8 & 0.344 & 0.007\\
+($\|g\|=0.46$) & Gaussian, $r=8$ & 66.8 & 64.1 & 60.8 & 129.9 & 0.818 & 0.001\\
+ & orthonormal, $r=1$ & 64.8 & 64.2 & 58.0 & 130.2 & 0.385 & 0.006\\
+ & orthonormal, $r=8$ & 64.3 & 65.4 & 59.8 & 129.3 & 0.937 & 0.001\\
+\midrule
+after training & Gaussian, $r=1$ & 70.8 & 221.3 & 5878 & 146.6 & 0.026 & 1.26\\
+($\|g\|=0.0074$) & Gaussian, $r=8$ & 65.0 & 90.0 & 598.5 & 133.3 & 0.058 & 0.26\\
+ & orthonormal, $r=1$ & 65.4 & 166.2 & 3225 & 129.8 & 0.028 & 1.12\\
+ & orthonormal, $r=8$ & 66.6 & 81.6 & 417.3 & 131.5 & 0.068 & 0.19\\
+\bottomrule
+\end{tabular}
+\end{table}
+Three predictions hold outside the quadratic model.
+\begin{itemize}
+\item \textbf{Critical radius.} At initialization the gradient is large, $\sigma_*$ is far above the tested radii, and LOO halves the error. After training the gradient is $60$ times smaller and so is $\sigma_*$: at $\sigma=0.03$ the rank-one LOO estimator is already worse than the antithetic one, and at $\sigma=0.1$ it is worse by a factor of $25$ to $40$. The even--odd ratio is above $1$ exactly in the cases where LOO loses at $\sigma=0.03$.
+\item \textbf{Rank.} The antithetic error does not depend on the rank, in line with [2]. The LOO error does: at $\sigma=0.03$ after training, rank $8$ is $2$ to $2.5$ times better than rank $1$, and $V_q$ is about $5$ times smaller.
+\item \textbf{Factors.} Orthonormal factors lower $V_q$ by only $10$--$25\%$ here, because the trace of the curvature is small ($\tau\approx1$) and the anisotropic part dominates. In this network the rank is the stronger lever.
+\end{itemize}
+For $\sigma\ge0.03$ after training the measured LOO error is above the quadratic prediction (for example $221$ against $158$ for rank one at $\sigma=0.03$), so higher-order terms add further noise. In an exploratory run with $M=2048$ and $\sigma=0.03$ (errors: antithetic $5.5$, LOO $7.1$), regressing the member losses on the free input-side statistic $\|Xb_j\|^2$ and on $\|a_j\|^2$ before forming the estimate lowered the LOO error to $5.0$; such even control variates deserve a proper study.
+
+\section{Training with the even--odd switch: a negative result}\label{sec:train}
+We trained the $64$--$32$--$10$ tanh network on 128 \texttt{digits} images with ES descent (both weight matrices perturbed, $d=2368$, Gaussian rank-one factors, 128 evaluations per step, $\sigma=0.05$, exact evaluations) and compared three methods at the same stepsize $\eta$: antithetic pairs, LOO, and a switch that keeps 16 probe pairs, tracks $\Var(e)$ and $\Var(o)$ with an exponential average, and uses one-sided evaluations only while $\Var(e)<\Var(o)$.
+
+\begin{table}[H]
+\centering\small
+\caption{Training loss after 1500 steps (mean of 2 seeds). The last column is the fraction of steps in which the switch used LOO.}\label{tab:train}
+\begin{tabular}{ccccc}
+\toprule
+$\eta$ & antithetic & LOO & switch & LOO fraction\\
+\midrule
+1.6 & $4.6\times10^{-4}$ & $4.6\times10^{-4}$ & $4.6\times10^{-4}$ & 0.05\\
+6.5 & $3.7\times10^{-5}$ & $5.5\times10^{-5}$ & $5.0\times10^{-5}$ & 0.09\\
+26 & $5.1\times10^{-5}$ & $2.7\times10^{-6}$ & $4.0\times10^{-6}$ & 0.80\\
+\bottomrule
+\end{tabular}
+\end{table}
+At a moderate stepsize the three methods are indistinguishable, although the switch reports that the LOO estimate has the larger error for most of the run. Differences appear only close to the largest stable stepsize: at $\eta=6.5$ antithetic is $1.5$ times better, and at $\eta=26$ antithetic is unstable early while LOO and the switch are not (all methods diverge at $\eta\approx100$). The switch stays within a factor $1.5$ of the better method but never beats it. With $\sigma=0.2$, and on an $L_2$-regularized version of the problem, all three methods agree within noise. So the switch is \emph{not} a demonstrated improvement, and we do not claim it as one.
+
+The reason is that the mean squared error is not the quantity that enters descent.
+\begin{proposition}[The variance that enters descent]\label{prop:hweighted}
+For a quadratic $F$ and an unbiased $\Gh$, $\E F(W-\eta\Gh)-F(W)=-\eta\|g\|^2+\frac{\eta^2}2\E\ip{\Gh}{H\Gh}$. For the antithetic estimator with i.i.d.\ directions, $\E\ip{\Gh_A}{H\Gh_A}=(1-\frac1N)\ip{g}{Hg}+\frac1N\E[\ip{g}{E}^2\ip{E}{HE}]$, and
+\begin{align*}
+\text{dense Gaussian:}\quad&\E[\ip{g}{E}^2\ip{E}{HE}]=\tau\|g\|^2+2\ip{g}{Hg},\\
+\text{Gaussian }ab^\top\text{, Kronecker }H:\quad&\E[\ip{G}{E}^2\ip{E}{HE}]=\tau\|G\|^2+2\rho_1\tr(G^\top LG)+2\ell_1\tr(GRG^\top)+4\ip{G}{LGR}.
+\end{align*}
+\end{proposition}
+\begin{proof}
+The first identity is a Taylor expansion, exact for quadratics. The dense case is Isserlis' formula. For $E=ab^\top$, condition on $a$ and use $\E_b[(b^\top v)^2b^\top Rb]=\rho_1\|v\|^2+2v^\top Rv$ with $v=G^\top a$, then $\E[(a^\top Sa)(a^\top La)]=\tr(S)\ell_1+2\tr(SL)$ for $S=GG^\top$ and $S=GRG^\top$.
+\end{proof}
+Both formulas were checked by Monte Carlo. The noise in the loss scales with $\tau/N$ (the trace of the curvature), not with $d/N$: the estimation error is spread over all $d$ directions, and most of them are flat. Descent is noise-limited only for $\eta$ of order $2N/\tau$, which is consistent with the stable range in Table~\ref{tab:train} ($\tau$ is of order one and $N=64$). This also changes the rank penalty: relative to the dense design it is about $2\lambda_L(G)/\ell_1+2\lambda_R(G)/\rho_1$, with $\lambda_L(G)=\tr(G^\top LG)/\|G\|^2$. For isotropic factors this is $2/m+2/n$, as in [2], but when $L$ and $R$ have a few dominant directions aligned with the gradient it is of order one and does not shrink with the width. A theory of low-rank ES in this curvature-weighted variance, for both estimators, is the natural next step.
+
+\section{Limitations and open points}
+\begin{itemize}
+\item All results are for quadratics. For general smooth losses the finite-rank bias of order $\sigma^2/r$ [2] must be added.
+\item $C_q$ for Gaussian products with $r>1$ is not derived (only $V_q$). It needs sixth moments of products of Wishart matrices.
+\item The stability bound of [D] is not yet extended to $\Gh_L$. The update stays affine in $W_t$, with an extra additive forcing term of variance $\frac{\sigma^2}4\Gamma_M$, so the same proof should apply.
+\item Orthogonal frames need two shared Haar matrices per layer, which costs $O(m^3+n^3)$; structured orthogonal matrices [3] are a cheaper option.
+\item Whether the curvature term matters at LLM scale depends on the radius used in practice; [2] reports that LOO-ROLL halves the error in transformer blocks, which suggests a small-$\sigma$ regime there. [2, Prop.~E.5] should be compared with Section 3.
+\end{itemize}
+
+\appendix
+\section{Proofs of the closed forms}\label{app:closed}
+\paragraph{Gaussian quadratic forms.} Let $a\sim N(0,I_m)$ and $L$ be symmetric. Then $\E[a^\top La]=\ell_1$ and $\E[(a^\top La)^2]=\ell_1^2+2\ell_2$. Write $a=\varrho u$ with $\varrho^2\sim\chi^2_m$ independent of $u$ uniform on the unit sphere; since $\E\varrho^{2k+2}/\E\varrho^{2k}=m+2k$,
+\[
+\E[(a^\top La)^k\|a\|^2]=(m+2k)\,\E[(a^\top La)^k],\qquad \E[(u^\top Lu)^2]=\frac{\ell_1^2+2\ell_2}{m(m+2)} .
+\]
+\paragraph{Proposition~\ref{prop:closed}(a).} Identify $E$ with $z\in\R^d$, so $q=z^\top Hz$. Then $V_q=2\|H\|_{HS}^2$ and
+$C_q=(d+4)(\tau^2+2\|H\|_{HS}^2)-2(d+2)\tau^2+d\tau^2=2(d+4)\|H\|_{HS}^2$. For the sphere, $q=d\,u^\top Hu$, so $V_q=\frac{d(\tau^2+2\|H\|^2_{HS})}{d+2}-\tau^2=\frac{2d}{d+2}\|H_0\|^2_{HS}$.
+
+\paragraph{Proposition~\ref{prop:closed}(b).} For $E=ab^\top$, $q=(a^\top La)(b^\top Rb)$ and $\|E\|^2=\|a\|^2\|b\|^2$ are products of independent factors, so $\E q^2=p$, $\E[q\|E\|^2]=(m+2)(n+2)\tau$ and $\E[q^2\|E\|^2]=(m+4)(n+4)p$. Also $c_4=\E\|a\|^4\E\|b\|^4/d=(m+2)(n+2)$. For normalized vectors, $q=d(\hat a^\top L\hat a)(\hat b^\top R\hat b)$ and $\E q^2=d^2p/(m(m+2)n(n+2))$.
+
+\paragraph{Proposition~\ref{prop:closed}(c).} Let $X=A^\top LA$ and $Y=B^\top RB$, so $q=\tr(XY)/r$. If $\E[X_{ij}X_{kl}]=\alpha_X\delta_{ij}\delta_{kl}+\beta_X(\delta_{ik}\delta_{jl}+\delta_{il}\delta_{jk})$ and similarly for $Y$, then
+\begin{equation}\label{eq:contract}
+\E\tr(XY)^2=r^2\alpha_X\alpha_Y+2r(\alpha_X\beta_Y+\beta_X\alpha_Y)+2r(r+1)\beta_X\beta_Y .
+\end{equation}
+For Gaussian factors, Isserlis' formula gives $(\alpha_X,\beta_X)=(\ell_1^2,\ell_2)$ and $(\alpha_Y,\beta_Y)=(\rho_1^2,\rho_2)$, which yields the stated $V_q=\E\tr(XY)^2/r^2-\tau^2$. For orthonormal factors, $X=Q_A^\top LQ_A$ is invariant under conjugation by $O(r)$, so $\E[X\otimes X]$ has the same form, and $q=\frac dr\tr(XY)$. With $\mu_d=\frac{\ell_1^2+2\ell_2}{m(m+2)}$, $\mu_o=\frac{(m+1)\ell_1^2-2\ell_2}{(m-1)m(m+2)}$ and $\mu_x=\frac{m\ell_2-\ell_1^2}{(m-1)m(m+2)}$ (the moments $\E(u^\top Lu)^2$, $\E(u^\top Lu)(v^\top Lv)$, $\E(u^\top Lv)^2$ of two orthonormal Haar columns),
+\begin{align*}
+T_1&=\E(\tr X)^2=r\mu_d+r(r-1)\mu_o,\qquad T_2=\E\tr X^2=r\mu_d+r(r-1)\mu_x,\\
+\beta_X&=\frac{rT_2-T_1}{r(r-1)(r+2)},\qquad \alpha_X=\frac{T_1-2r\beta_X}{r^2}
+\end{align*}
+for $r\ge2$ (for $r=1$ take $\alpha_X=\mu_d$, $\beta_X=0$), and the same for $Y$ with $(n,\rho_1,\rho_2)$. Then $V_q=\frac{d^2}{r^2}\E\tr(XY)^2-\tau^2$ with \eqref{eq:contract}.
+
+\section{Code}\label{app:code}
+\lstinputlisting[language=Python]{theory.py}
+\lstinputlisting[language=Python]{sim.py}
+
+\section*{References}
+{\small
+\begin{itemize}[leftmargin=2.2em]
+\item[{[D]}] Our draft, \emph{Quadratic Stability and Excess Risk of EGGROLL}, 2026.
+\item[{[1]}] B. Sarkar et al. Evolution Strategies at the Hyperscale. arXiv:2511.16652v2, 2026.
+\item[{[2]}] E. C. Kaya and A. Hashemi. EGGROLL, Unrolled: Understanding and Improving Low-Rank Evolution Strategies at Scale. arXiv:2609.10980v2, 2026.
+\item[{[3]}] K. Choromanski, M. Rowland, V. Sindhwani, R. E. Turner, A. Weller. Structured evolution with compact architectures for scalable policy optimization. \emph{ICML}, 2018.
+\item[{[4]}] R. M. Gower and P. Richt\'arik. Randomized iterative methods for linear systems. \emph{SIAM J. Matrix Anal. Appl.} 36(4), 1660--1690, 2015.
+\end{itemize}}
+\end{document}
