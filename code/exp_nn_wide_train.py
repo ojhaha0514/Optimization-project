@@ -1,23 +1,24 @@
-"""Experiment 5: training the wide network (64-512-512-10) with ES, exact directional derivatives,
-N = 16384 rank-one probes per step. Plain steps (W -= eta*U) and normalized steps (W -= eta*U/|U|)."""
-import numpy as np, json, sys
+"""Experiment: training the network 64-512-512-10 with ES (rank-one probes on all three matrices, one shared
+scalar per probe, exact directional derivatives), plain updates W <- W - eta * U, 60 steps, seed 0.
+Methods: gd (exact gradient), es, two (optimal shrinker on detected directions + weight w on the rest;
+w = 0 is shrinkage only, w = 1 keeps the undetected part unchanged)."""
+import numpy as np, json, os
 import exp_nn
 from shrink import *
 
 exp_nn.h = 512
-N, T = 16384, 60
+T = 60
 X, y = exp_nn.data()
 
 
-def train(method, eta, w=0.0, seed=0):
-    """method: gd | es | two.  two: optimal shrinker on detected directions + weight w on the rest."""
+def train(method, eta, w=0.0, N=16384, seed=0):
     Ws = exp_nn.init(seed); rng = np.random.default_rng(seed)
     curve = []
     for t in range(T):
         G = exp_nn.grad(Ws, X, y)
         if t % 2 == 0:
             curve.append(float(exp_nn.loss(Ws, X, y)))
-            if not np.isfinite(curve[-1]) or curve[-1] > 20:
+            if not np.isfinite(curve[-1]) or curve[-1] > 1e4:
                 curve += [float("inf")] * (T // 2 - len(curve)); break
         if method == "gd":
             U = G
@@ -36,16 +37,15 @@ def train(method, eta, w=0.0, seed=0):
 
 
 if __name__ == "__main__":
-    out = {"N": N, "T": T}
-    runs = [("gd", 0.3, 0), ("gd", 1.0, 0), ("gd", 2.4, 0), ("es", 0.15, 0), ("es", 0.3, 0), ("es", 0.6, 0), ("es", 1.2, 0),
-            ("es", 2.4, 0), ("two", 1.2, 0.0), ("two", 1.2, 1.0), ("two", 2.4, 0.5)]
-    import os
-    if os.path.exists("results_nn_wide_train.json"):
-        out = json.load(open("results_nn_wide_train.json"))
-    for method, eta, w in runs:
-        if "%s_%g_%g" % (method, eta, w) in out:
+    out = json.load(open("results_nn_wide_train.json")) if os.path.exists("results_nn_wide_train.json") else {"T": T}
+    runs = [("gd", e, 0, 16384) for e in (0.3, 0.6, 1.0, 1.2, 2.4)]
+    runs += [("es", e, 0, N) for N in (64, 256, 1024, 4096) for e in (0.3, 0.6, 1.2)]
+    runs += [("es", e, 0, 16384) for e in (0.15, 0.3, 0.6, 1.2, 2.4)]
+    runs += [("two", e, w, 16384) for e in (1.2, 0.6, 0.3) for w in (0.0, 1.0)]
+    for method, eta, w, N in runs:
+        key = "%s|eta=%g|w=%g|N=%d" % (method, eta, w, N)
+        if key in out:
             continue
-        c = train(method, eta, w)
-        out["%s_%g_%g" % (method, eta, w)] = c
-        print(method, "eta %g" % eta, "bulk weight %g" % w, "loss at steps 0,10,..:", np.round(c[::5], 4), flush=True)
+        out[key] = train(method, eta, w, N)
+        print(key, "loss at steps 0,10,..,50:", np.array2string(np.array(out[key][::5]), precision=4), flush=True)
         json.dump(out, open("results_nn_wide_train.json", "w"))

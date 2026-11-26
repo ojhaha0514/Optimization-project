@@ -85,19 +85,23 @@ def flip_scale(y, P, nu, rng, k=3, safety=1.1):
     return max(1.0, safety * top / (nu * (np.sqrt(m) + np.sqrt(n))))
 
 
-def iterated_shrink(y, P, rng, iters=20, scale=None, tol=1e-6):
-    """Iterated shrinkage on the SAME evaluations: G <- shrink(G + ES estimate of the residual).
-    The noise level is re-estimated from the residual at every pass (it is known: mean(res^2)/N).
-    This is singular value projection (Jain, Meka, Dhillon 2010) with a data-driven threshold."""
+def niht(y, P, rank, iters=100, tol=1e-8):
+    """Normalized iterative hard thresholding with known rank (stepsize rule of Tanner & Wei 2013),
+    the rank-aware recovery of Allen et al. (2026), run on the SAME probes and scalars:
+    G <- Proj_r(G + eta * D), D = (1/N) sum_j res_j E_j, eta = line search on the current column space."""
     N = len(y)
-    m, n = (P[0].shape[1], P[1].shape[1]) if isinstance(P, tuple) else P.shape[1:]
-    G = np.zeros((m, n))
+    D = es_estimate(y, P)
+    U = np.linalg.svd(D, full_matrices=False)[0][:, :rank]
+    G = np.zeros_like(D)
     y2 = (y ** 2).mean()
     for k in range(iters):
         res = y - measure(G, P)
-        nu = np.sqrt((res ** 2).mean() / N)
         if (res ** 2).mean() < tol * y2:
             break
-        sc = flip_scale(res, P, nu, rng, k=1) if scale is None else scale
-        G = shrink(G + es_estimate(res, P), nu, scale=sc)
+        D = es_estimate(res, P)
+        DU = U @ (U.T @ D)
+        eta = (DU ** 2).sum() / ((measure(DU, P) ** 2).mean() + 1e-300)
+        Uf, s, Vt = np.linalg.svd(G + eta * D, full_matrices=False)
+        U = Uf[:, :rank]
+        G = (U * s[:rank]) @ Vt[:rank]
     return G
