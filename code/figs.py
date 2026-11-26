@@ -56,6 +56,6 @@ for l, col in zip(range(3), ["#1f77b4", "#d62728", "#2ca02c"]):
     L = r["states"]["gd100"]["layers"][l]
     a.semilogy(np.arange(1, len(L["sv2"]) + 1), L["sv2"], ".-", color=col, ms=3, label="layer %d (%d$\\times$%d)" % (l + 1, *L["shape"]))
     a.axhline(np.sqrt(L["shape"][0] * L["shape"][1]) / 16384, color=col, ls=":", lw=0.8)
-a.set_xlabel("index $i$"); a.set_title("(c) $s_i^2/\\|g\\|^2$ and threshold at $N=16384$", fontsize=9); a.legend()
+a.set_ylim(3e-5, 1); a.set_xlabel("index $i$"); a.set_title("(c) $s_i^2/\\|g\\|^2$ (dotted: threshold)", fontsize=9); a.legend()
 fig.tight_layout(); fig.savefig("../report/fig_nn.pdf")
 print("figures written")

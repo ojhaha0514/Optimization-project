@@ -4,9 +4,9 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage[font=small,skip=3pt]{caption}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.42em}
+\setlength{\parskip}{0.36em}
 \setlist{topsep=1pt,itemsep=1pt,parsep=0pt}
-\setlength{\textfloatsep}{8pt}
+\setlength{\textfloatsep}{6pt}
 \newtheorem{theorem}{Theorem}
 \newtheorem{proposition}[theorem]{Proposition}
 \newtheorem{lemma}[theorem]{Lemma}
@@ -20,11 +20,12 @@
 \DeclareMathOperator{\tr}{tr}
 \makeatletter
 \renewcommand\section{\@startsection{section}{1}{\z@}{-1.4ex plus -.3ex}{0.6ex}{\normalfont\large\bfseries}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}{-1.0ex plus -.2ex}{0.3ex}{\normalfont\normalsize\bfseries}}
 \renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}{0.6ex}{-0.6em}{\normalfont\normalsize\bfseries}}
 \makeatother
 
 \begin{document}
-{\small Optimization for Data Science, Autumn 2026 --- Final report \hfill [team member names]}
+{\small Optimization for Data Science, Autumn 2026 --- Final report \hfill [team names]}
 \vspace{-0.3em}
 \begin{center}
 {\Large\textbf{Can a prior shrink the variance of EGGROLL?}}\\[0.25em]
@@ -41,27 +42,27 @@ It is unbiased on quadratics, but its relative error is about $d/N$, where $d$ i
 
 \emph{Can a prior or a penalty on the gradient reduce the error of \eqref{eq:es} without new loss evaluations, and if so, does this make ES descent faster?}
 
-\textbf{Answer.} (i) A prior that has no preferred direction (ridge penalty, James--Stein, any isotropic prior) cannot help: no estimator has relative error below $1-N/d$ (Theorem~\ref{thm:nogo}). (ii) A low-rank prior can. With dense Gaussian probes, $\Gh$ is \emph{exactly} a low-rank signal plus white noise of known size (Theorem~\ref{thm:spike}). Singular-value shrinkage then removes the noise, but only above a sharp threshold on the population size, $N>N^\star=\sqrt{mn}\,\|g\|^2/s_1^2$, and we give the exact error (Theorem~\ref{thm:risk}). (iii) EGGROLL's rank-one probes cost almost nothing in mean squared error [2], but they make the noise spectrum heavier, which delays the threshold; we give the exact noise covariance and a calibration that needs no extra evaluations (Proposition~\ref{prop:cov}). (iv) A smaller error does \emph{not} automatically give faster descent. We find two obstacles: a curvature ceiling (Proposition~\ref{prop:ceiling}) and a stall caused by the bias of shrinkage. In our experiments the gradient direction improves a lot (cosine $0.23\to0.59$ in a neural network at equal cost), but training speed improves little or not at all.
+\textbf{Answer.} (i) A prior with no preferred direction (ridge, James--Stein, any isotropic prior) cannot help: no estimator has relative error below $1-N/d$ (Theorem~\ref{thm:nogo}). (ii) A low-rank prior can. With dense Gaussian probes, $\Gh$ is \emph{exactly} a low-rank signal plus white noise of known size (Theorem~\ref{thm:spike}). Singular-value shrinkage removes the noise, but only above a sharp threshold $N>N^\star=\sqrt{mn}\,\|g\|^2/s_1^2$, and we give the exact error (Theorem~\ref{thm:risk}). (iii) EGGROLL's rank-one probes make the noise spectrum heavier, which delays the threshold; we give the exact noise covariance and a calibration that needs no extra evaluations (Proposition~\ref{prop:cov}). (iv) A smaller error does \emph{not} give faster descent automatically: there is a curvature ceiling (Proposition~\ref{prop:ceiling}) and a stall caused by the bias of shrinkage. In a neural network the gradient cosine improves from $0.23$ to $0.59$ at equal cost, but training becomes slower.
 
 \section{Related work and formulation}
-\textbf{ES and EGGROLL.} Sarkar et al.\ [1] introduce EGGROLL. Kaya and Hashemi [2] show that the rank of the probes changes the variance only by the relative amount $2(m+n+1)/(r(d+1))$, and halve the variance with a leave-one-out baseline. Our draft [D] and notes [N] study stability, the radius $\sigma$ and the factor design on quadratics. None of these uses structure of the gradient itself.
+\textbf{ES and EGGROLL.} Sarkar et al.\ [1] introduce EGGROLL. Kaya and Hashemi [2] show that the probe rank changes the variance only by the relative amount $2(m+n+1)/(r(d+1))$, and halve the variance with a leave-one-out baseline. Our draft [D] and notes [N] study stability, the radius $\sigma$ and the factor design on quadratics. None of these uses structure of the gradient itself.
 
-\textbf{Structure in zeroth-order methods.} Sparse gradients can be recovered by LASSO or compressed sensing [8, 9]. Guided ES and ASEBO [10, 11] sample probes from a learned subspace. LOZO [12] uses low-rank probes because gradients of language models are close to low rank [13]; MeZO [14] explains why zeroth-order fine-tuning works by the low effective rank of the Hessian. The closest work is Allen et al.\ [3] (September 2026): they note that directional derivatives are linear measurements of the gradient matrix and use matrix-sensing solvers [6, 7] to recover an approximately rank-$r$ gradient from about $r(m+n)$ queries. We do not compete with [3] in that \emph{recovery regime}. EGGROLL works far below it (one scalar per pair is shared by all layers, and $N$ is much smaller than the total number of degrees of freedom), and we ask what a prior can do there with one SVD. Our tools are optimal singular-value shrinkage [4] and the spiked-matrix theory behind it [5]; the matrix form of James--Stein shrinkage goes back to Efron and Morris [15].
+\textbf{Structure in zeroth-order methods.} Sparse gradients can be recovered by LASSO or compressed sensing [8, 9]. Guided ES and ASEBO [10, 11] draw probes from a learned subspace. LOZO [12] uses low-rank probes because gradients of language models are close to low rank [13]; MeZO [14] explains zeroth-order fine-tuning by the low effective rank of the Hessian. The closest work is Allen et al.\ [3] (September 2026): directional derivatives are linear measurements of the gradient matrix, and matrix-sensing solvers [6, 7] recover an approximately rank-$k$ gradient from about $k(m+n)$ queries. We do not compete with [3] in that \emph{recovery regime}. EGGROLL works far below it (all layers share one scalar per probe, and $N$ is far smaller than the total number of degrees of freedom), and we ask what a prior can do there with one SVD. Our tools are optimal singular-value shrinkage [4] and spiked-matrix theory [5]; matrix shrinkage goes back to Efron and Morris [15].
 
 \textbf{Formulation.} The parameters are matrices $W_1,\dots,W_L$ with $W_l\in\R^{m_l\times n_l}$ and $d=\sum_lm_ln_l$. Let $g=(G_1,\dots,G_L)$ be the gradient, with $\|g\|^2=\sum_l\|G_l\|_F^2$. A \emph{probe} is $E_j=(E_{j,1},\dots,E_{j,L})$ and all layers share the scalar $y_j$. We assume exact directional derivatives,
 \begin{equation}\label{eq:model}
 y_j=\ip{E_j}{g}=\sum_l\ip{E_{j,l}}{G_l},\qquad j=1,\dots,N,
 \end{equation}
-which holds for antithetic pairs on a quadratic for every $\sigma$ [2, D]; for smooth losses the error is $O(\sigma^2)$. \emph{Dense probes} have i.i.d.\ $N(0,1)$ entries. \emph{Rank-$r$ probes} are $E_{j,l}=A_{j,l}B_{j,l}^\top/\sqrt r$ with i.i.d.\ $N(0,1)$ factors. We write $G$ for one layer, $m\le n$ for its shape (transpose otherwise), $\beta=m/n$, $s_1\ge s_2\ge\dots$ for its singular values, and $\nu=\|g\|/\sqrt N$. An estimator is any function of $(E_j,y_j)_{j\le N}$. We measure the relative error $\E\|\widetilde G-G\|_F^2/\|G\|_F^2$.
+which holds for antithetic pairs on a quadratic for every $\sigma$ [2, D]; for smooth losses the error is $O(\sigma^2)$. \emph{Dense probes} have i.i.d.\ $N(0,1)$ entries. \emph{Rank-$r$ probes} are $E_{j,l}=A_{j,l}B_{j,l}^\top/\sqrt r$ with i.i.d.\ $N(0,1)$ factors. We write $G$ for one layer, $m\le n$ for its shape (transpose otherwise), $\beta=m/n$, $s_1\ge s_2\ge\dots$ for its singular values, and $\nu=\|g\|/\sqrt N$. An estimator is any function of $(E_j,y_j)_{j\le N}$; we measure its relative squared error.
 
 \section{Approach and results}
-Everything in this section except the two cited limit theorems [4, 5] is our own contribution. Proofs are in Appendix~\ref{app:proofs}.
+Everything here except the cited limit theorems [4, 5] is our own contribution. Proofs are in Appendix~\ref{app:proofs}.
 
 \subsection{Isotropic priors cannot help}
 \begin{theorem}[No gain without structure]\label{thm:nogo}
 Let the probes be any random matrices independent of $g$, with $N<d$, and let $g$ have a rotation-invariant law with $\E\|g\|^2=1$ (for example uniform on the unit sphere). Then every estimator $\tilde g$ satisfies $\E\|\tilde g-g\|^2\ge1-N/d$. Hence $\sup_{\|g\|=1}\E\|\tilde g-g\|^2\ge1-N/d$ for every estimator. The bound is attained by the projection of $g$ on the span of the probes, which is the ridge estimator $\arg\min_h\sum_j(y_j-\ip{E_j}{h})^2+\lambda\|h\|^2$ as $\lambda\to0$.
 \end{theorem}
-For comparison, the best scalar multiple of the ES estimate has relative error $1-1/\kappa$ with $\kappa=1+(d+1)/N$ for dense probes [N]. So the best possible estimator explains the fraction $N/d$ of the gradient and plain ES explains $N/(N+d+1)$. For $N\ll d$ these are the same. James--Stein shrinkage does not apply either: the noise of ES is proportional to $\|g\|$ itself, so the best shrinkage factor $1/\kappa$ is a known constant. \emph{A prior helps only if it prefers some directions.}
+For comparison, the best scalar multiple of the ES estimate has relative error $1-1/\kappa$ with $\kappa=1+(d+1)/N$ for dense probes [N]. So the best possible estimator explains the fraction $N/d$ of the gradient and plain ES explains $N/(N+d+1)$. For $N\ll d$ these are the same. James--Stein shrinkage gives nothing either: the ES noise is proportional to $\|g\|$, so the best factor $1/\kappa$ is a known constant. \emph{A prior helps only if it prefers some directions.}
 
 \subsection{The ES estimate is a spiked matrix}
 \begin{theorem}[Exact representation]\label{thm:spike}
@@ -71,10 +72,10 @@ For dense probes and every $g\neq0$,
 \]
 where $\Gamma$ has i.i.d.\ $N(0,1)$ entries, $N\alpha\sim\chi^2_N$, and $\Gamma$ and $\alpha$ are independent.
 \end{theorem}
-Since $\alpha\approx1$, each layer satisfies $\Gh_l\approx G_l+\nu\,\Gamma_l$: \emph{the true gradient plus white noise with entry variance $\nu^2=\|g\|^2/N$}. Three things follow. The noise level is known, because $\E y_j^2=\|g\|^2$, so $\hat\nu^2=\frac1N\cdot\frac1N\sum_jy_j^2$. The noise in every layer is set by the norm of the \emph{whole} gradient. And if $G_l$ has a few large singular values, they stand out from the noise, whose singular values fill the interval up to $\nu(\sqrt m+\sqrt n)$. This is the setting of optimal singular-value shrinkage [4]. Let $\Gh=\sum_i\hat s_i\hat u_i\hat v_i^\top$ be the SVD and define
+Since $\alpha\approx1$, each layer satisfies $\Gh_l\approx G_l+\nu\,\Gamma_l$: \emph{the true gradient plus white noise with entry variance $\nu^2=\|g\|^2/N$}. The noise level is known: $\E y_j^2=\|g\|^2$, so $\hat\nu^2=\frac1{N^2}\sum_jy_j^2$. It is set by the norm of the \emph{whole} gradient in every layer. If $G_l$ has a few large singular values, they stand out from the noise, whose singular values fill the interval up to $\nu(\sqrt m+\sqrt n)$. This is the setting of optimal singular-value shrinkage [4]. Let $\Gh=\sum_i\hat s_i\hat u_i\hat v_i^\top$ be the SVD and define
 \begin{equation}\label{eq:shr}
 \mathcal S(\Gh)=\sum_i\nu\sqrt n\;\eta\!\Big(\frac{\hat s_i}{\nu\sqrt n}\Big)\hat u_i\hat v_i^\top,\qquad
-\eta(t)=\frac1t\sqrt{(t^2-\beta-1)^2-4\beta}\ \text{ if }t>1+\sqrt\beta,\quad \eta(t)=0\text{ otherwise}.
+\eta(t)=\frac1t\sqrt{(t^2-\beta-1)^2-4\beta}\ \cdot\mathbf 1\{t>1+\sqrt\beta\}.
 \end{equation}
 Like soft thresholding, which solves $\min_G\frac12\|\Gh-G\|_F^2+\lambda\|G\|_*$, this is ``ES with a low-rank penalty''; $\eta$ is the penalty shape that is optimal for white noise [4].
 
@@ -90,14 +91,14 @@ N>N_i^\star:=\sqrt{mn}\,\frac{\|g\|^2}{s_i^2}.
 \end{equation}
 For $x\to\infty$, $R(x)\to1+\beta$: each well-detected direction costs $\nu^2(m+n)$ instead of its share of $\nu^2mn$.
 \end{theorem}
-For a single layer, $N_1^\star=\sqrt{mn}\cdot\mathrm{srank}(G)$ with the stable rank $\mathrm{srank}(G)=\|G\|_F^2/s_1^2$. So a prior on the spectrum starts to help at $N\approx\sqrt d$, not $N\approx d$. Far above the threshold, the relative error drops from $mn/N$ to about $k(m+n)/N$, a factor $w/(2k)$ for width $w$. Below the threshold, shrinkage returns zero and nothing is gained. Appendix~\ref{app:proofs} also gives a bound for finite $N$ (Proposition~\ref{prop:finite}).
+For a single layer, $N_1^\star=\sqrt{mn}\cdot\mathrm{srank}(G)$ with the stable rank $\mathrm{srank}(G)=\|G\|_F^2/s_1^2$. So a prior on the spectrum starts to help at $N\approx\sqrt d$, not $N\approx d$. Far above the threshold, the relative error drops from $mn/N$ to about $k(m+n)/N$, a factor $w/(2k)$ for width $w$. Below the threshold, shrinkage returns zero and nothing is gained. Proposition~\ref{prop:finite} in the appendix gives a bound for finite $N$.
 
 Figure~\ref{fig:risk}(a) compares Theorem~\ref{thm:risk} with Monte Carlo for $m=80$, $n=120$ and a rank-3 gradient. The formula has no free parameter and matches the dense-probe simulation at every $N$.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.84\textwidth]{fig_risk.pdf}
-\caption{$G$ is $80\times120$ with singular values proportional to $(1,0.6,0.35)$; $d=9600$; 20 repetitions. (a) Relative error. Dotted vertical lines are the thresholds $N_i^\star$ of \eqref{eq:Nstar}. (b) Largest singular value of the noise $\Gh-G$ divided by the white-noise edge $\nu(\sqrt m+\sqrt n)$.}\label{fig:risk}
+\includegraphics[width=0.7\textwidth]{fig_risk.pdf}
+\caption{$G$ is $80\times120$ with singular values proportional to $(1,0.6,0.35)$; $d=9600$; 20 repetitions. (a) Dotted vertical lines: thresholds $N_i^\star$ of \eqref{eq:Nstar}. (b) Largest singular value of the noise $\Gh-G$ over the white-noise edge.}\label{fig:risk}
 \end{figure}
 
 \subsection{Low-rank probes make the noise heavier}
@@ -109,9 +110,9 @@ N\,\E\big[(\Gh-G)(\Gh-G)^\top\big]=\Big(n+\frac2r\Big)\|G\|_F^2\,I_m+\Big(\frac{
 \]
 and the same holds for $(\Gh-G)^\top(\Gh-G)$ with $m$ and $n$ exchanged. For dense probes ($r=\infty$) it is $n\|G\|_F^2I_m+GG^\top$.
 \end{proposition}
-So the noise is larger exactly in the singular directions of the signal: along $u_i$ the variance is multiplied by about $1+\frac{2}{r}\,s_i^2/\|G\|_F^2$, which is $3$ for a rank-one gradient and rank-one probes. There is a second effect. Each rank-one probe adds the rank-one matrix $y_ja_jb_j^\top/N$ of operator norm about $|y_j|\sqrt{mn}/N$ to the noise. This is not small against the edge $\nu(\sqrt m+\sqrt n)$ unless $N$ is well above $\min(m,n)$. Figure~\ref{fig:risk}(b) shows the result: for rank-one probes the top noise singular value is $2.5$ times the white-noise edge at $N=60$ and still $1.09$ times at $N=10^4$; for rank-4 probes it is $1.0$ from $N\approx4000$ on. With the uncorrected threshold of \eqref{eq:shr}, rank-one probes at $N\le400$ give an error 4 to 70 times that of the zero estimate (Table~\ref{tab:flip}).
+So the noise is larger exactly in the singular directions of the signal: along $u_i$ the variance is multiplied by about $1+\frac{2}{r}\,s_i^2/\|G\|_F^2$, which is $3$ for a rank-one gradient and rank-one probes. Also, each rank-one probe adds a rank-one term of operator norm about $|y_j|\sqrt{mn}/N$ to the noise, which is not small against the edge $\nu(\sqrt m+\sqrt n)$ unless $N\gg\min(m,n)$. Figure~\ref{fig:risk}(b) shows the result: for rank-one probes the top noise singular value is $2.5$ times the white-noise edge at $N=60$ and still $1.09$ times at $N=10^4$; for rank-4 probes it is $1.0$ from $N\approx4000$ on. With the uncorrected threshold of \eqref{eq:shr}, rank-one probes at $N\le400$ give an error 4 to 70 times that of the zero estimate (Table~\ref{tab:flip}).
 
-\textbf{Sign-flip calibration.} Replace $y_j$ by $\epsilon_jy_j$ with random signs $\epsilon_j$. The estimate $\frac1N\sum_j\epsilon_jy_jE_j$ contains no signal but has noise of the same law. Its top singular value divided by $\hat\nu(\sqrt m+\sqrt n)$ gives a factor $\hat c\ge1$ (we take the maximum of three sign draws times $1.1$), and we use $\hat c\,\nu$ in place of $\nu$ in \eqref{eq:shr}. This costs no loss evaluation. In Figure~\ref{fig:risk}(b) $\hat c$ follows the true edge from above. With it, rank-one probes need about 2 to 2.5 times more directions than dense probes for the same error (Figure~\ref{fig:risk}(a)). This is a new cost of low-rank probes that the mean squared error does not show: \emph{a higher probe rank does not improve the ES estimate, but it makes the estimate easier to denoise.}
+\textbf{Sign-flip calibration.} Replace $y_j$ by $\epsilon_jy_j$ with random signs $\epsilon_j$. The estimate $\frac1N\sum_j\epsilon_jy_jE_j$ contains no signal but has noise of the same law. Its top singular value divided by $\hat\nu(\sqrt m+\sqrt n)$ gives a factor $\hat c\ge1$, and we use $\hat c\,\nu$ in place of $\nu$ in \eqref{eq:shr}. This costs no loss evaluation. In Figure~\ref{fig:risk}(b) $\hat c$ follows the true edge from above. With it, rank-one probes need about 2 to 2.5 times more directions than dense probes for the same error (Figure~\ref{fig:risk}(a)). This is a new cost of low-rank probes that the mean squared error does not show: \emph{a higher probe rank does not improve the ES estimate, but it makes the estimate easier to denoise.}
 
 \subsection{Does a smaller error make descent faster?}
 \textbf{A curvature ceiling.} Let $f$ be quadratic with Hessian $H$.
@@ -123,39 +124,34 @@ With dense probes and the best stepsize, one ES step decreases $f$ in expectatio
 \end{proposition}
 Even a perfect estimate gains only the factor $1+\rho$. If $H=hI$, then $1+\rho\approx1+d/N$ and the whole error matters. If $H$ has a few large eigenvalues, $\rho$ is about (effective rank of $H$)$/N$, which can be far below $1$: most of the ES noise then lies in flat directions and costs nothing. This is the same reason why zeroth-order fine-tuning works at all [14].
 
-\textbf{A stall caused by bias.} Shrinkage \eqref{eq:shr} is biased: it returns only the detected directions. We ran ES descent on $f(W)=\frac12\ip{W-W^\star}{H(W-W^\star)}$ with $m=n=200$, a rank-3 target $W^\star$, $W_0=0$ and $N=4000$ rank-one probes per step (so $d/N=10$, and $N$ is above $N_1^\star=311$ and $N_2^\star=700$). With $H=I$ the ceiling is $11$. The first shrunk step is good: it removes $57\%$ of the loss, against $9\%$ for ES. But the error of that step lies in new, wrong directions. After a few steps the residual $W_t-W^\star$ is spread over many directions, none of them above the threshold, and the method stops (Figure~\ref{fig:descent}(a); Table~\ref{tab:stall} in the appendix shows the top singular value share falling from $0.64$ to $0.12$). \emph{A low-rank prior used with fresh probes destroys the low-rank structure it relies on.}
+\textbf{A stall caused by bias.} Shrinkage \eqref{eq:shr} is biased: it returns only the detected directions. We ran ES descent on $f(W)=\frac12\ip{W-W^\star}{H(W-W^\star)}$ with $m=n=200$, a rank-3 target $W^\star$, $W_0=0$ and $N=4000$ rank-one probes per step ($d/N=10$; $N_1^\star=311$, $N_2^\star=700$). With $H=I$ the ceiling is $11$. The first shrunk step is good: it removes $57\%$ of the loss, against $9\%$ for ES. But the error of that step lies in new, wrong directions. After a few steps the residual $W_t-W^\star$ is spread over many directions, none of them above the threshold, and the method stops (Figure~\ref{fig:descent}(a) and Table~\ref{tab:stall} in Appendix~\ref{app:exp}: the share of the top singular value falls from $0.64$ to $0.12$). \emph{A low-rank prior used with fresh probes destroys the low-rank structure it relies on.}
 
 \textbf{Two-level shrinkage.} A simple repair keeps the undetected part with the weight that is optimal for plain ES:
 \begin{equation}\label{eq:two}
 \mathcal S_2(\Gh)=\mathcal S(\Gh)+\frac1\kappa\sum_{i:\ \eta_i=0}\hat s_i\hat u_i\hat v_i^\top,\qquad\kappa=1+\frac dN.
 \end{equation}
-Below the threshold this is exactly ES with stepsize $\eta/\kappa$, so it cannot stall. In Figure~\ref{fig:descent}(a) it reaches $10^{-2}$ of the initial loss in 39 steps against 50 for ES. This is a real but small gain, far from the ceiling $11$. With a decaying spectrum (eigenvalues $1/k$ on both sides, ceiling $1.05$) no method improves on ES, as Proposition~\ref{prop:ceiling} predicts (Figure~\ref{fig:descent}(b)).
+Below the threshold this is exactly ES with stepsize $\eta/\kappa$, so it cannot stall. In Figure~\ref{fig:descent}(a) it reaches $10^{-2}$ of the initial loss in 39 steps against 50 for ES. This is a real but small gain, far from the ceiling $11$. With a decaying spectrum (ceiling $1.05$) no method improves on ES, as Proposition~\ref{prop:ceiling} predicts (Figure~\ref{fig:descent}(b)).
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.8\textwidth]{fig_descent.pdf}
-\caption{ES descent on a $200\times200$ quadratic with a rank-3 target and $N=4000$ rank-one probes per step. Each method uses its best stepsize from a grid; mean of 2 runs.}\label{fig:descent}
-\end{figure}
 
 \subsection{A neural network}
 We test the predictions on a tanh network $64$--$512$--$512$--$10$ with cross-entropy loss on 256 images of the \texttt{digits} data ($d=300{,}544$). All three matrices get rank-one probes and share one scalar per probe, as in EGGROLL.
 
-\textbf{The gradient is spiky enough, and the theory predicts when shrinkage works.} The stable rank of each layer gradient is 3 to 5, during the whole run. The thresholds \eqref{eq:Nstar} after 100 gradient steps are $N_1^\star=6641$, $5554$ and $630$ for the three layers. Figure~\ref{fig:nn} shows the cosine between the estimate and the true gradient, the quantity that does not depend on the stepsize. Below $N\approx4000$ only the last layer is detected. At $N=16384$ ($d/N=18$) the cosine rises from $0.23$ (ES) to $0.56$--$0.59$, and at $N=65536$ from $0.42$ to $0.82$--$0.87$. The per-layer errors follow Theorem~\ref{thm:risk} up to the extra cost of rank-one probes (Table~\ref{tab:nn}). In a smaller network (width 96, $N=1024$) the two large layers are below the threshold and shrinkage correctly returns zero for them.
+\textbf{The gradient is spiky enough, and the theory predicts when shrinkage works.} The stable rank of each layer gradient is 3 to 5, during the whole run. The thresholds \eqref{eq:Nstar} after 100 gradient steps are $N_1^\star=6641$, $5554$ and $630$ for the three layers. Figure~\ref{fig:nn} shows the cosine between the estimate and the true gradient, the quantity that does not depend on the stepsize. Below $N\approx4000$ only the last layer is detected. At $N=16384$ ($d/N=18$) the cosine rises from $0.23$ (ES) to $0.56$--$0.59$, and at $N=65536$ from $0.42$ to $0.82$--$0.87$. The per-layer errors follow Theorem~\ref{thm:risk} up to the extra cost of rank-one probes (Table~\ref{tab:nn}). In a smaller network (width 96, $N=1024$) the two large layers are below the threshold and shrinkage returns zero for them.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.96\textwidth]{fig_nn.pdf}
+\includegraphics[width=0.82\textwidth]{fig_nn.pdf}
 \caption{Network $64$--$512$--$512$--$10$. (a, b) Cosine between the estimate of the whole gradient and the true gradient. (c) Squared singular values of the layer gradients divided by $\|g\|^2$; a direction is detected at $N=16384$ if it lies above the dotted line $\sqrt{mn}/N$ of the same color.}\label{fig:nn}
 \end{figure}
 
-\textbf{Training.} TRAININGPLACEHOLDER
+\textbf{Training.} We trained this network for 60 steps with plain updates $W\leftarrow W-\eta U$ and $N=16384$ (one seed; Table~\ref{tab:train}). ES follows exact gradient descent with the same $\eta$ almost exactly (loss $0.0265$ against $0.0269$ after 50 steps at $\eta=0.3$), although its cosine is only $0.23$: the noise lies in flat directions, which is Proposition~\ref{prop:ceiling} with a small $\rho$. So there is no room for improvement, and shrinkage is in fact \emph{worse}. At $\eta=1.2$ the loss after 50 steps is $0.0038$ for ES, $0.0065$ when the detected directions are shrunk and the rest is kept, and $0.032$ for shrinkage only. The estimate with the best cosine is the slowest: ES is unbiased, so the undetected part still carries the rest of the gradient, and shrinkage removes it.
 
 \section{Discussion and limitations}
-\textbf{What the results establish.} For the question ``can a prior shrink the variance?'' the answer has three parts. Without a preferred direction: no, by a minimax bound. With a low-rank prior: yes for the estimation error, by a factor up to $w/(2k)$, and there is a sharp, computable population size $N^\star=\sqrt{mn}\|g\|^2/s_1^2$ below which nothing is possible by spectral methods. For optimization: much less than the error suggests. The gain is limited by the curvature ceiling $1+\rho$, and the bias of shrinkage spreads the residual so that the gain stays a small constant.
+\textbf{What the results establish.} Can a prior shrink the variance? Without a preferred direction: no, by a minimax bound. With a low-rank prior: yes for the estimation error, by a factor up to $w/(2k)$, above a sharp and computable population size $N^\star$. For optimization: much less than the error suggests, and sometimes a loss, because of the curvature ceiling, the bias of shrinkage, and because in our network the ES noise was harmless from the start. A useful prior must act on the curvature-weighted error $\ip{\tilde g-g}{H(\tilde g-g)}$, not on $\|\tilde g-g\|^2$.
 
-\textbf{Which assumptions matter.} (a) Exact directional derivatives \eqref{eq:model}. For smooth non-quadratic losses there is an extra bias of order $\sigma^2/r$ [2]; we did not study it together with shrinkage. (b) Dense probes in Theorems~\ref{thm:spike} and \ref{thm:risk}. For rank-$r$ probes we have the exact covariance and simulations, but no limit theorem; the noise edge of rank-one probes (Figure~\ref{fig:risk}(b)) has no formula yet. (c) Theorem~\ref{thm:risk} is asymptotic.
+\textbf{Which assumptions matter.} (a) Exact directional derivatives \eqref{eq:model}; for non-quadratic losses there is an extra bias of order $\sigma^2/r$ [2]. (b) Dense probes in Theorems~\ref{thm:spike}--\ref{thm:risk}; for rank-$r$ probes we have the covariance and simulations, but no formula for the noise edge. (c) Theorem~\ref{thm:risk} is asymptotic. (d) The training result is one small network, one seed, plain updates; Adam-type updates were not tested.
 
-\textbf{What remains open.} (1) The stall suggests using a prior that persists over time, for example the singular subspace of the last update; our notes [N] found that isotropic temporal shrinkage fails, but a low-rank version is different. (2) In the recovery regime of [3], iterating \eqref{eq:shr} on the residuals $y_j-\ip{E_j}{G^{(k)}}$ with the same evaluations should give an almost exact gradient. In our tests this iteration with unit stepsize was unstable unless $N\ge6k(m+n)$ (Appendix~\ref{app:exp}); a careful comparison with the solvers of [3] under shared scalars and rank-one probes is open. (3) We could not test the scale of [1]. There $\sqrt{mn}\approx4096$ per layer and populations reach $2^{18}$, so \eqref{eq:Nstar} holds for a layer only if its top direction carries more than about $1.6\%$ of the squared norm of the whole gradient. With hundreds of layers sharing each scalar this is unlikely for all layers, but it can be checked with one backward pass. (4) With normalized or Adam-type updates the error enters differently than in Proposition~\ref{prop:ceiling}; we did not test this.
+\textbf{What remains open.} (1) A prior on the curvature-weighted error, or one that persists over time. (2) In the recovery regime of [3], iterating \eqref{eq:shr} on the residuals of the same evaluations recovered the gradient exactly with rank-8 probes at $N\approx7k(m+n)$ but was unstable below (Appendix~\ref{app:exp}). (3) At the scale of [1], $\sqrt{mn}\approx4096$ and $N\le2^{18}$, so \eqref{eq:Nstar} needs a top direction with more than $1.6\%$ of $\|g\|^2$; one backward pass can check this, but we could not run it.
 
 {\small
 \section*{References}
