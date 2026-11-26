@@ -6,52 +6,54 @@ Condition on the probes, which are independent of $g$. Let $V=\mathrm{span}\{E_1
 \[
 \big(\Pi g,\,(I-\Pi)g\big)\overset d=\big(\Pi g,\,-(I-\Pi)g\big),\qquad\text{so}\qquad\E\big[(I-\Pi)g\mid\Pi g\big]=0 .
 \]
-Let $\tilde g$ be any estimator; given the probes it is a (possibly randomized) function of $\Pi g$. Write $\tilde g-g=(\tilde g-\Pi g)-(I-\Pi)g$. The cross term has mean zero by the last display, so
+Let $\tilde g$ be any estimator. Given the probes it is a function of $\Pi g$ (and possibly of independent randomness). Write $\tilde g-g=(\tilde g-\Pi g)-(I-\Pi)g$. By the last display the cross term has mean zero, so
 \[
 \E\|\tilde g-g\|^2=\E\|\tilde g-\Pi g\|^2+\E\|(I-\Pi)g\|^2\ \ge\ \E\|(I-\Pi)g\|^2=\Big(1-\frac kd\Big)\E\|g\|^2\ \ge\ 1-\frac Nd .
 \]
-The last equality uses $\E[gg^\top]=\frac1d\E\|g\|^2I$, which holds for rotation-invariant laws. The supremum over the unit sphere is at least the average over the uniform law on it. Equality holds for $\tilde g=\Pi g$ when $k=N$. The minimum-norm solution of $\ip{E_j}{h}=y_j$ is $\Pi g$, and the ridge estimator converges to it as $\lambda\to0$. \qed
+The last equality uses $\E[gg^\top]=\frac1d\E\|g\|^2I$, which holds for rotation-invariant laws. The maximum over the unit sphere is at least the average over the uniform law on it. \qed
 
-\textbf{The plain ES estimate.} For i.i.d.\ probes with $\E\hat g=g$ and $\E\|\hat g\|^2=\kappa\|g\|^2$, $\min_a\E\|a\hat g-g\|^2=(1-1/\kappa)\|g\|^2$ at $a=1/\kappa$ [N, Prop.~11]. For dense probes $\kappa=1+(d+1)/N$ (also a consequence of Theorem~\ref{thm:spike}), so the fraction of $\|g\|^2$ that is explained is $1/\kappa=N/(N+d+1)$, against the optimum $N/d$.
+\textbf{Two facts used in the text.} (i) For dense probes, $k=N$ almost surely and the projection $\Pi g$ has error exactly $(1-N/d)\|g\|^2$ for every $g$~[3, Lemma~1]; $\Pi g$ is the minimum-norm solution of $\ip{E_j}{h}=y_j$ and the limit of the ridge estimator as $\lambda\to0$. (ii) For i.i.d.\ probes with $\E\hat g=g$ and $\E\|\hat g\|^2=\kappa\|g\|^2$, $\min_a\E\|a\hat g-g\|^2=(1-1/\kappa)\|g\|^2$ at $a=1/\kappa$~[N, Prop.~11]. For dense probes $\kappa=1+(d+1)/N$, so $1/\kappa=N/(N+d+1)$.
 
 \subsection{Proof of Theorem~\ref{thm:spike}}
 Let $z_j=\ip{E_j}{u}$ and $E_j^\perp=E_j-z_ju$. Since $E_j$ is a standard Gaussian vector, $z_j\sim N(0,1)$, $E_j^\perp$ is Gaussian with covariance $I-uu^\top$, and the two are independent. With $y_j=\|g\|z_j$,
 \[
 \hat g=\frac{\|g\|}{N}\sum_jz_j\big(z_ju+E_j^\perp\big)=\alpha g+\frac{\|g\|}{N}\sum_jz_jE_j^\perp,\qquad\alpha=\frac1N\sum_jz_j^2 .
 \]
-Given $z=(z_1,\dots,z_N)$, the sum $\sum_jz_jE_j^\perp$ is Gaussian with mean zero and covariance $\|z\|^2(I-uu^\top)$. This is the law of $\|z\|(\Gamma-\ip{\Gamma}{u}u)$ for a standard Gaussian $\Gamma$. It depends on $z$ only through $\|z\|=\sqrt{N\alpha}$, so we can take $\Gamma$ independent of $z$. Then $\frac{\|g\|}{N}\sqrt{N\alpha}=\sqrt\alpha\,\|g\|/\sqrt N$. \qed
+Given $z=(z_1,\dots,z_N)$, the sum $\sum_jz_jE_j^\perp$ is Gaussian with mean zero and covariance $\|z\|^2(I-uu^\top)$. This is the law of $\|z\|(\Gamma-\ip{\Gamma}{u}u)$ for a standard Gaussian $\Gamma$. It depends on $z$ only through $\|z\|=\sqrt{N\alpha}$, so we can take $\Gamma$ independent of $z$. Finally $\frac{\|g\|}{N}\sqrt{N\alpha}=\sqrt\alpha\,\|g\|/\sqrt N$. \qed
 
-\emph{Check.} $\E\|\hat g-g\|^2=\|g\|^2\big[\E(\alpha-1)^2+\E\alpha\,\frac{d-1}{N}\big]=\frac{d+1}{N}\|g\|^2$, the known value [2].
+\emph{Check.} $\E\|\hat g-g\|^2=\|g\|^2\big[\E(\alpha-1)^2+\E\alpha\,\frac{d-1}{N}\big]=\frac{d+1}{N}\|g\|^2$, the known value~[2, 3].
 
-\subsection{A bound for finite $N$}
-\begin{proposition}\label{prop:finite}
+\textbf{Why sign flips measure the noise (dense probes).} Let $\epsilon_j$ be independent random signs. By the same decomposition,
+\[
+\frac1N\sum_j\epsilon_jy_jE_j=\|g\|\Big(\frac1N\sum_j\epsilon_jz_j^2\Big)u+\frac{\|g\|}{N}\sum_j(\epsilon_jz_j)E_j^\perp .
+\]
+The variables $\epsilon_jz_j$ are again i.i.d.\ $N(0,1)$ and independent of the $E_j^\perp$, so the second term has exactly the law of the noise term of $\hat g$. The first term has mean zero and its coefficient has variance $3/N$. In a layer its operator norm is about $s_1\sqrt{3/N}$, which is below the detection level $\nu(mn)^{1/4}$ of Theorem~\ref{thm:risk} as soon as $(mn)^{1/4}>\sqrt3$. So it does not move the top singular value. For rank-one probes we rely on simulation: in the setting of Figure~\ref{fig:risk} the sign-flip ratio is within $4\%$ of the true ratio at every $N$.
+
+\subsection{Proof of Theorem~\ref{thm:risk} (reduction to [4, 5]) and a bound for finite $N$}
+By Theorem~\ref{thm:spike}, with $X=\sum_{i\le k}x_iu_iv_i^\top$ (the scaled SVD of $G$) and $W=\Gamma_l$,
+\[
+\frac{\Gh}{\sqrt\alpha\,\nu\sqrt n}=\sqrt\alpha\,X+\frac{W}{\sqrt n}-\frac{\ip{\Gamma}{u}}{\sqrt n}u_l ,
+\]
+where $u_l$ is the layer-$l$ block of $u$. This is the model $X'+W/\sqrt n$ of [4, 5] with $X'=\sqrt\alpha X-\ip{\Gamma}{u}u_l/\sqrt n$. As $N\to\infty$, $\alpha\to1$ almost surely and $|\ip{\Gamma}{u}|/\sqrt n\to0$, so $\|X'-X\|_\op\to0$ and $X'$ has rank at most $k+1$ with singular values converging to $x_1,\dots,x_k,0$. For the model $X+W/\sqrt n$, the results of [5] give, for $x_i>\beta^{1/4}$,
+\[
+\hat s_i\to\sqrt{\Big(x_i+\frac1{x_i}\Big)\Big(x_i+\frac\beta{x_i}\Big)},\qquad
+\ip{\hat u_i}{u_i}^2\to c_i^2=\frac{x_i^4-\beta}{x_i^4+\beta x_i^2},\qquad
+\ip{\hat v_i}{v_i}^2\to\tilde c_i^2=\frac{x_i^4-\beta}{x_i^4+x_i^2},
+\]
+and for $x_i\le\beta^{1/4}$, $\hat s_i\to1+\sqrt\beta$ with asymptotically no correlation between the singular vectors. [4] shows that the loss of a shrinkage rule with values $\eta_i$ then converges to $\sum_i(x_i^2+\eta_i^2-2x_i\eta_ic_i\tilde c_i)$, that the minimizer is $\eta_i=x_ic_i\tilde c_i$, and that this equals the function $\varphi(\hat s_i)$ of Algorithm~1. The minimum is $x_i^2(1-c_i^2\tilde c_i^2)=R(x_i)$, and a direction that is not detected contributes $x_i^2$. These limits are continuous in the strengths $x_i$, so they are not changed by replacing $X$ with $X'$, nor by the factor $\sqrt\alpha\to1$. The condition $x_i>\beta^{1/4}$ reads $s_i^2N/(\|g\|^2n)>\sqrt{m/n}$, which is \eqref{eq:Nstar}. For $x\to\infty$, $(x^4-\beta)^2/(x^2(x^2+\beta)(x^2+1))=x^2-(1+\beta)+O(x^{-2})$. \qed
+
+The only new step is Theorem~\ref{thm:spike}, which puts the ES estimate into the model of [4, 5]. We did not re-derive the limits of [4, 5]; Figure~\ref{fig:risk}a checks the final formula numerically.
+
+\begin{proposition}[Finite $N$]\label{prop:finite}
 Use dense probes, let $\mathrm{rank}(G_l)\le k$ and let $T_k$ be the truncation of the SVD to the top $k$ terms. Then always $\|T_k(\Gh_l)-G_l\|_F^2\le8k\|\Gh_l-G_l\|_\op^2$, and for every $t>0$, with probability at least $1-4e^{-t^2/2}$,
 \[
 \|\Gh_l-G_l\|_\op\le|\alpha-1|\,s_1(G_l)+\sqrt\alpha\,\frac{\|g\|}{\sqrt N}\big(\sqrt{m}+\sqrt{n}+2t\big),\qquad\E(\alpha-1)^2=\frac2N .
 \]
 \end{proposition}
 \begin{proof}
-$T_k(\Gh_l)-G_l$ has rank at most $2k$, so its Frobenius norm is at most $\sqrt{2k}$ times its operator norm. By the triangle inequality and Weyl's inequality, $\|T_k(\Gh_l)-G_l\|_\op\le\hat s_{k+1}+\|\Gh_l-G_l\|_\op\le2\|\Gh_l-G_l\|_\op$, because $s_{k+1}(G_l)=0$. For the second claim use Theorem~\ref{thm:spike}: $\Gh_l-G_l=(\alpha-1)G_l+\sqrt\alpha\,\nu(\Gamma_l-\ip{\Gamma}{u}u_l)$, where $u_l$ is the layer-$l$ block of $u$ and $\|u_l\|_\op\le1$. A Gaussian matrix satisfies $\|\Gamma_l\|_\op\le\sqrt m+\sqrt n+t$ with probability at least $1-2e^{-t^2/2}$ [16], and $|\ip{\Gamma}{u}|\le t$ with probability at least $1-2e^{-t^2/2}$.
+$T_k(\Gh_l)-G_l$ has rank at most $2k$, so its Frobenius norm is at most $\sqrt{2k}$ times its operator norm. By the triangle inequality and Weyl's inequality, $\|T_k(\Gh_l)-G_l\|_\op\le\hat s_{k+1}+\|\Gh_l-G_l\|_\op\le2\|\Gh_l-G_l\|_\op$, because $s_{k+1}(G_l)=0$. For the second claim, Theorem~\ref{thm:spike} gives $\Gh_l-G_l=(\alpha-1)G_l+\sqrt\alpha\,\nu(\Gamma_l-\ip{\Gamma}{u}u_l)$ with $\|u_l\|_\op\le1$. A Gaussian matrix satisfies $\|\Gamma_l\|_\op\le\sqrt m+\sqrt n+t$ with probability at least $1-2e^{-t^2/2}$~[16], and $|\ip{\Gamma}{u}|\le t$ with probability at least $1-2e^{-t^2/2}$.
 \end{proof}
-So, up to constants, the relative error of the truncated estimate is at most
-\[
-8k\big(\sqrt m+\sqrt n\big)^2\frac{\|g\|^2}{N\|G_l\|_F^2},\qquad\text{compared with}\qquad mn\frac{\|g\|^2}{N\|G_l\|_F^2}\ \text{ without truncation.}
-\]
-
-\subsection{Proof of Theorem~\ref{thm:risk} (reduction to [4, 5])}
-By Theorem~\ref{thm:spike}, with $X=\sum_{i\le k}x_iu_iv_i^\top$ (the scaled SVD of $G$) and $W=\Gamma_l$,
-\[
-\frac{\Gh}{\sqrt\alpha\,\nu\sqrt n}=\sqrt\alpha\,X+\frac{W}{\sqrt n}-\frac{\ip{\Gamma}{u}}{\sqrt n}u_l .
-\]
-This is the spiked model $X'+W/\sqrt n$ of [4, 5] with $X'=\sqrt\alpha X-\ip{\Gamma}{u}u_l/\sqrt n$. As $N\to\infty$, $\alpha\to1$ almost surely and $|\ip{\Gamma}{u}|/\sqrt n\to0$, so $\|X'-X\|_\op\to0$ and $X'$ has rank at most $k+1$ with singular values converging to $x_1,\dots,x_k,0$. For the model $X+W/\sqrt n$, the results of [5] give, for $x_i>\beta^{1/4}$,
-\[
-\hat s_i\to\sqrt{\Big(x_i+\frac1{x_i}\Big)\Big(x_i+\frac\beta{x_i}\Big)},\qquad
-\ip{\hat u_i}{u_i}^2\to c_i^2=\frac{x_i^4-\beta}{x_i^4+\beta x_i^2},\qquad
-\ip{\hat v_i}{v_i}^2\to\tilde c_i^2=\frac{x_i^4-\beta}{x_i^4+x_i^2},
-\]
-and for $x_i\le\beta^{1/4}$, $\hat s_i\to1+\sqrt\beta$ with asymptotically no correlation between the singular vectors. [4] shows that the loss of a shrinker with values $\eta_i$ then converges to $\sum_i(x_i^2+\eta_i^2-2x_i\eta_ic_i\tilde c_i)$, that the minimizer is $\eta_i=x_ic_i\tilde c_i$, and that this equals the function $\eta(\hat s_i)$ of \eqref{eq:shr}. The minimum is $x_i^2(1-c_i^2\tilde c_i^2)=R(x_i)$, and a non-detected spike contributes $x_i^2$. Since these limits are continuous in the spike strengths, they are not changed by replacing $X$ with $X'$, nor by the factor $\sqrt\alpha\to1$ in the scaling. The condition $x_i>\beta^{1/4}$ reads $s_i^2N/(\|g\|^2n)>\sqrt{m/n}$, which is \eqref{eq:Nstar}. For $x\to\infty$, $(x^4-\beta)^2/(x^2(x^2+\beta)(x^2+1))=x^2-(1+\beta)+O(x^{-2})$. \qed
-
-We state this as a reduction: the only new step is Theorem~\ref{thm:spike}, which puts the ES estimate into the model of [4, 5]. We did not re-derive the limits of [4, 5]; Figure~\ref{fig:risk}(a) checks the final formula numerically.
+So, up to constants, the truncated estimate has squared error at most $8k(\sqrt m+\sqrt n)^2\nu^2$, against $mn\,\nu^2$ without truncation.
 
 \subsection{Proof of Proposition~\ref{prop:cov}}
 One probe gives $\Gh_1=yE$ with $E=AB^\top/\sqrt r$ and $y=\ip{E}{G}=\ip{M}{B}/\sqrt r$, $M=G^\top A\in\R^{n\times r}$. Since $\E\Gh_1=G$ and the $N$ terms are independent, $N\,\E[(\Gh-G)(\Gh-G)^\top]=\E[\Gh_1\Gh_1^\top]-GG^\top$. Now $\Gh_1\Gh_1^\top=\frac1{r^2}\ip{M}{B}^2AB^\top BA^\top$. Given $A$, Isserlis' formula for the Gaussian matrix $B$ gives
@@ -62,130 +64,118 @@ With $S=GG^\top$, $\|M\|_F^2=\tr(A^\top SA)$ and $M^\top M=A^\top SA$, so $\E[\G
 \[
 \E\big[\tr(A^\top SA)AA^\top\big]=r^2\tr(S)I+2rS,\qquad\E\big[AA^\top SAA^\top\big]=r(r+1)S+r\tr(S)I .
 \]
-Together, $\E[\Gh_1\Gh_1^\top]=(n+\frac2r)\tr(S)I+(\frac{2n}r+2+\frac2r)S$; subtract $GG^\top$ and note $\tr(S)=\|G\|_F^2$. The other side follows by exchanging the roles of $A$ and $B$. For dense probes, $\E[\ip{E}{G}^2EE^\top]=n\|G\|_F^2I+2GG^\top$ by Isserlis' formula. \qed
+Together, $\E[\Gh_1\Gh_1^\top]=(n+\frac2r)\tr(S)I+(\frac{2n}r+2+\frac2r)S$. Subtract $GG^\top$ and note $\tr(S)=\|G\|_F^2$. The other side follows by exchanging the roles of $A$ and $B$. For dense probes, $\E[\ip{E}{G}^2EE^\top]=n\|G\|_F^2I+2GG^\top$ by Isserlis' formula. \qed
 
 We checked the formula by Monte Carlo ($6\times9$, rank-2 $G$, $4\cdot10^5$ samples): the largest entrywise deviation, relative to the largest entry, is below $1\%$ for $r=1,2,8$.
 
+\textbf{Heavy tails.} The covariance does not show a second effect of low-rank probes. Each rank-one probe contributes to $\Gh$ the rank-one matrix $y_ja_jb_j^\top/N$, of operator norm about $|y_j|\sqrt{mn}/N$. Relative to the noise edge $\nu(\sqrt m+\sqrt n)$ this is $\frac{|y_j|}{\|g\|}\cdot\frac{\sqrt{mn}}{(\sqrt m+\sqrt n)\sqrt N}$, which is small for all $j$ only if $N$ is much larger than $\min(m,n)$.
+
 \subsection{Proof of Proposition~\ref{prop:ceiling}}
-For a quadratic, $f(W-\eta D)-f(W)=-\eta\ip{g}{D}+\frac{\eta^2}2\ip{D}{HD}$. For $D=\hat g$ with dense probes, $\E\hat g=g$ and
+For a quadratic, $f(W-\eta U)-f(W)=-\eta\ip{g}{U}+\frac{\eta^2}2\ip{U}{HU}$. Taking expectations and maximizing over $\eta$ gives $\Delta(U)=(\E\ip{g}{U})^2/(2\,\E\ip{U}{HU})$. For $U=g$ this is $\|g\|^4/(2\ip{g}{Hg})$. For $U=\hat g$ with dense probes, $\E\hat g=g$ and
 \[
 \E\ip{\hat g}{H\hat g}=\Big(1-\frac1N\Big)\ip{g}{Hg}+\frac1N\E\big[\ip{g}{E}^2\ip{E}{HE}\big]=\Big(1+\frac1N\Big)\ip{g}{Hg}+\frac1N\tr(H)\|g\|^2,
 \]
-by independence of the probes and Isserlis' formula $\E[\ip{g}{E}^2\ip{E}{HE}]=\tr(H)\|g\|^2+2\ip{g}{Hg}$. Minimizing $-\eta\|g\|^2+\frac{\eta^2}2Q$ over $\eta$ gives the decrease $\|g\|^4/(2Q)$; $Q=\E\ip{\hat g}{H\hat g}$ for ES and $Q=\ip{g}{Hg}$ for the exact gradient. \qed
+by independence of the probes and Isserlis' formula $\E[\ip{g}{E}^2\ip{E}{HE}]=\tr(H)\|g\|^2+2\ip{g}{Hg}$. Dividing, $\Delta(g)/\Delta(\hat g)=1+\frac1N+\frac{T}{N}$. If $U$ is unbiased, $\E\ip{g}{U}=\|g\|^2$ and $\E\ip{U}{HU}=\ip{g}{Hg}+\E\ip{U-g}{H(U-g)}\ge\ip{g}{Hg}$ because $H\succeq0$; hence $\Delta(U)\le\Delta(g)$. \qed
 
-The second-moment identity is from our notes [N, Prop.~13]. For rank-one probes and Kronecker $H$ the term $\tr(H)\|g\|^2$ gets small corrections given there.
-
-\section{Use of AI}
-We used Claude (Anthropic) to explore ideas, to derive and check proofs, to write the code and to draft the text. The question, the earlier draft [D] and notes [N], and the final checking are ours.
+The second-moment identity is in our notes [N, Prop.~13]; [14] gives a bound of the same kind in terms of the effective rank of the Hessian. Since $\ip{g}{Hg}\le\lambda_{\max}(H)\|g\|^2$, we always have $T\ge\tr(H)/\lambda_{\max}(H)$.
 
 \section{Experiments: details and further results}\label{app:exp}
-All code is in the repository (\texttt{code/}); every number in this report is produced by the scripts named below, with fixed seeds. Only \texttt{numpy} is needed (and \texttt{scikit-learn} for the data).
+\textbf{Code.} All experiments use \texttt{numpy} only (and \texttt{scikit-learn} for the data) and fixed seeds. Each script in \texttt{code/} writes a results file; \texttt{figs.py} and \texttt{tables.py} then produce every figure and every table of this report. \texttt{shrink.py} contains Algorithm~1 and the formula of Theorem~\ref{thm:risk}. In step 2 of Algorithm~1 we use $1.1$ times the largest ratio over three sign draws.
 
-\textbf{Figure~\ref{fig:risk} (\texttt{exp\_risk.py}).} $G=U\,\mathrm{diag}(s)V^\top$ with Haar factors and $s\propto(1,0.6,0.35)$. ``Shrunk'' is \eqref{eq:shr} with $\hat\nu^2=\frac1{N^2}\sum_jy_j^2$; for rank-1 and rank-4 probes with the sign-flip factor $\hat c$, taken as $1.1$ times the maximum over three sign draws (and at least $1$). Table~\ref{tab:flip} shows that the calibration is necessary for low-rank probes and costs little for dense ones.
+\textbf{Figure~\ref{fig:idea} (\texttt{exp\_illustration.py}).} $G=\sum_{i\le2}s_iu_iv_i^\top$ is $400\times400$ with smooth singular vectors (orthonormalized sinusoids) and $s_1^2:s_2^2=0.70:0.30$. With $N=16000$ rank-one probes the relative error is $9.85$ for the ES estimate and $0.19$ after Algorithm~1 ($\hat c=1.22$). With dense probes it is $9.84$ and $0.10$; Theorem~\ref{thm:risk} gives $0.097$.
+
+\textbf{Figure~\ref{fig:risk} and Table~\ref{tab:flip} (\texttt{exp\_risk.py}).} $G=U\,\mathrm{diag}(s)V^\top$ with Haar factors and $s\propto(1,0.6,0.35)$. Table~\ref{tab:flip} shows that the calibration is necessary for low-rank probes and costs little for dense ones.
 
 \begin{table}[H]
 \centering\small
-\caption{Relative error of the shrunk estimate without and with sign-flip calibration (setting of Figure~\ref{fig:risk}). Values above 1 are worse than the zero estimate.}\label{tab:flip}
+\caption{Relative error of Algorithm~1 without and with sign-flip calibration (setting of Figure~\ref{fig:risk}). Values above 1 are worse than the zero estimate.}\label{tab:flip}
 \begin{tabular}{lcccccc}
 \toprule
 $N$ & 60 & 160 & 400 & 1000 & 2500 & 10000\\
 \midrule
-dense probes, no calibration & 1.00 & 0.99 & 0.75 & 0.42 & 0.21 & 0.058\\
-dense probes, calibrated & 1.00 & 1.00 & 0.83 & 0.47 & 0.23 & 0.059\\
-rank-4 probes, no calibration & 21.7 & 3.41 & 1.05 & 0.52 & 0.25 & 0.068\\
-rank-4 probes, calibrated & 1.00 & 1.00 & 0.86 & 0.54 & 0.27 & 0.068\\
-rank-1 probes, no calibration & 70.9 & 15.1 & 4.16 & 1.14 & 0.39 & 0.097\\
-rank-1 probes, calibrated & 1.00 & 1.00 & 0.99 & 0.73 & 0.37 & 0.097\\
-\midrule
-Theorem~\ref{thm:risk} (dense) & 1.00 & 0.99 & 0.73 & 0.42 & 0.21 & 0.058\\
-plain ES, $(d+1)/N$ & 160 & 60 & 24 & 9.6 & 3.8 & 0.96\\
+\tabin{tab_flip}
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Figure~\ref{fig:descent} (\texttt{exp\_descent.py}).} $f(W)=\frac12\ip{W-W^\star}{L(W-W^\star)R}$ with diagonal $L,R$; $W^\star$ has singular values $(3,2,1)$. Stepsize grids: powers of two around $1/\kappa$ for ES and around $1$ for the shrinkage methods; the best final loss is shown. Steps to reach $10^{-2}$ of the initial loss for $H=I$: exact gradient 1, ES 50, two-level 39, shrinkage only 37 (but it stalls at $4.5\cdot10^{-3}$). Steps to $10^{-4}$: ES 99, two-level 89. Table~\ref{tab:stall} shows the stall.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{fig_descent.pdf}
-\caption{ES descent on a $200\times200$ quadratic with a rank-3 target and $N=4000$ rank-one probes per step. Each method uses its best stepsize from a grid; mean of 2 runs.}\label{fig:descent}
-\end{figure}
+\textbf{One SVD against recovery (\texttt{exp\_recovery.py}).} $G$ is $200\times200$ with singular values $(3,2,1)$, so $k(m+n-k)=1191$ and $N_i^\star=311$, $700$, $2800$. ``Recovery [3]'' is normalized iterative hard thresholding with the true rank $k=3$: $G\leftarrow\mathrm{Proj}_k(G+\eta D)$ with $D=\frac1N\sum_j(y_j-\ip{E_j}{G})E_j$ and the stepsize rule of~[15], at most 100 iterations, on the same probes and scalars as Algorithm~1.
 
 \begin{table}[H]
 \centering\small
-\caption{Shrinkage only, stepsize 1, $H=I$, rank-one probes, one run. ``Top share'' is $s_1^2/\|G\|_F^2$ of the current gradient $G=W_t-W^\star$. ``Error'' is the relative error of the shrunk estimate at this step.}\label{tab:stall}
-\begin{tabular}{lccccccccc}
+\caption{Relative error (median of 3 draws). Recovery is exact from about three times the number of degrees of freedom, also with rank-one probes. Below that number both methods fail, and recovery can be worse than the zero estimate.}\label{tab:recovery}
+\begin{tabular}{lccccc}
+\toprule
+$N$ & 500 & 1000 & 2000 & 4000 & 8000\\
+\tabin{tab_recovery}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Quadratics (\texttt{exp\_descent.py}).} $f(W)=\frac12\ip{W-W^\star}{L(W-W^\star)R}$ with diagonal $L,R$, so $H=L\otimes R$; $W^\star$ is $200\times200$ with singular values $(3,2,1)$; $W_0=0$; $N=4000$ rank-one probes per step; exact slopes. \emph{Isotropic case:} $L=R=I$. \emph{Decaying case:} $L=R=\mathrm{diag}(1,\frac12,\dots,\frac1{200})$, so the eigenvalues of $H$ are $1/(ij)$. \emph{Two-level shrinkage} keeps the part that Algorithm~1 sets to zero with a weight $w$:
+\[
+\Sh_w(\Gh)=\Sh(\Gh)+w\sum_{i\ \text{not detected}}\hat s_i\hat u_i\hat v_i^\top .
+\]
+Here $w=1/\kappa$ with $\kappa=1+d/N$, the best scalar shrinkage of the plain ES estimate; below the threshold the method is then ES with stepsize $\eta/\kappa$. Stepsizes are chosen from grids of powers of two (around $1/\kappa$ for ES and around $1$ for the shrinkage methods) by the final loss; curves are means of 2 runs. In the isotropic case the numbers of steps to reach $10^{-2}$ of the initial loss are: exact gradient 1, recovery [3] 1, ES 50, two-level 39, shrinkage only 37 (but it stalls at $4.5\cdot10^{-3}$). To reach $10^{-4}$: ES 99, two-level 89. Table~\ref{tab:stall} shows the stall, and Figure~\ref{fig:decaying} shows the decaying case.
+
+\begin{table}[H]
+\centering\small
+\caption{Shrinkage only with stepsize 1 in the isotropic case, one run. The share of the top direction is $s_1^2/\|G\|_F^2$ for the current gradient $G=W_t-W^\star$. A direction is detected only if its share exceeds $\hat c^2\sqrt{mn}/N\approx0.075$.}\label{tab:stall}
+\begin{tabular}{lcccccccc}
 \toprule
 step & 0 & 1 & 2 & 3 & 4 & 6 & 8 & 10\\
 \midrule
-loss & 7.00 & 2.99 & 1.77 & 1.52 & 1.18 & 0.95 & 0.86 & 0.77\\
-top share & 0.64 & 0.27 & 0.22 & 0.21 & 0.19 & 0.15 & 0.12 & 0.12\\
-directions kept & 2 & 4 & 2 & 3 & 2 & 1 & 1 & 1\\
-error & 0.43 & 0.59 & 0.86 & 0.78 & 0.89 & 0.96 & 0.98 & 0.97\\
+\tabin{tab_stall}
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Figure~\ref{fig:nn} (\texttt{exp\_nn\_wide.py}).} Network $64$--$512$--$512$--$10$, tanh, Gaussian initialization, cross-entropy on a fixed batch of 256 standardized \texttt{digits} images. The directional derivatives are exact, $y_j=\sum_la_{j,l}^\top G_lb_{j,l}$ with $G_l$ from backpropagation; this is the limit $\sigma\to0$ of an antithetic pair. In the small network, antithetic finite differences with $\sigma=10^{-3}$ differ from the exact values by $0.015\%$ in relative $\ell_2$ norm, by $1.3\%$ for $\sigma=10^{-2}$ and by $60\%$ for $\sigma=0.1$ (\texttt{check\_fd.py}); so the model \eqref{eq:model} needs a small radius.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.46\textwidth]{fig_decaying.pdf}
+\caption{Decaying case: $T=210$, $N=4000$ rank-one probes per step. Proposition~\ref{prop:ceiling} gives the factor $1.05$, and all methods are close to the exact gradient.}\label{fig:decaying}
+\end{figure}
+
+\textbf{Network (\texttt{exp\_nn\_wide.py}, \texttt{exp\_nn\_curvature.py}, \texttt{exp\_nn\_wide\_train.py}).} Tanh network $64$--$512$--$512$--$10$ without biases, Gaussian initialization, cross-entropy on a fixed batch of 256 standardized \texttt{digits} images. The slopes are exact, $y_j=\sum_la_{j,l}^\top G_lb_{j,l}$ with $G_l$ from backpropagation; this is the limit $\sigma\to0$ of \eqref{eq:es}. In a smaller network, finite differences with $\sigma=10^{-3}$ differ from the exact slopes by $0.015\%$ in relative $\ell_2$ norm, by $1.3\%$ for $\sigma=10^{-2}$ and by $60\%$ for $\sigma=0.1$ (\texttt{check\_fd.py}).
 
 \begin{table}[H]
 \centering\small
-\caption{Network $64$--$512$--$512$--$10$ after 100 gradient steps (loss $0.012$). Relative error per layer: plain ES / shrunk (measured, rank-one probes, calibrated, one draw) / Theorem~\ref{thm:risk} (dense probes).}\label{tab:nn}
+\caption{Network after 100 gradient steps. Relative error per layer: plain ES / Algorithm~1 (measured, rank-one probes, one draw) / Theorem~\ref{thm:risk} (dense probes, applied to all singular values of the layer).}\label{tab:nn}
 \begin{tabular}{lccccc}
 \toprule
 layer (shape) & $N_1^\star$ & $N=1024$ & $N=4096$ & $N=16384$ & $N=65536$\\
 \midrule
-1 ($512\times64$) & 6641 & 257 / 1.00 / 1.00 & 65 / 1.00 / 1.00 & 16 / 0.95 / 0.92 & 3.9 / 0.64 / 0.57\\
-2 ($512\times512$) & 5554 & 636 / 1.00 / 1.00 & 164 / 1.00 / 1.00 & 40 / 0.91 / 0.84 & 10 / 0.47 / 0.41\\
-3 ($10\times512$) & 630 & 12 / 1.00 / 0.98 & 2.9 / 0.91 / 0.73 & 0.75 / 0.43 / 0.37 & 0.19 / 0.14 / 0.13\\
+\tabin{tab_nn}
 \bottomrule
 \end{tabular}
 \end{table}
-The per-layer errors stay large in the two wide layers even when the cosine of the whole gradient is high: the estimate keeps the top directions and drops the rest, and the last layer carries about half of $\|g\|^2$.
-
-\textbf{Small network (\texttt{exp\_nn.py}).} $64$--$96$--$96$--$10$, $d=16320$, $N=1024$ antithetic pairs with $\sigma=10^{-3}$ (true finite differences). After 300 gradient steps, $N_1^\star=2147$, $2216$, $366$. Shrinkage returns zero for layers 1 and 2 and has relative error $0.92$ in layer 3 (Theorem~\ref{thm:risk}: $1.00$, $1.00$, $0.81$). The cosine of the whole gradient is $0.24$ for ES and $0.29$ for two-level shrinkage.
-
-\textbf{Training (\texttt{exp\_nn\_wide\_train.py}).} Network $64$--$512$--$512$--$10$, $N=16384$ rank-one probes per step, exact directional derivatives, plain updates $W\leftarrow W-\eta U$, 60 steps, one seed. ``Two-level, weight $w$'' uses $\mathcal S(\Gh)+w\sum_{i:\eta_i=0}\hat s_i\hat u_i\hat v_i^\top$; $w=0$ is shrinkage only and $w=1$ keeps the undetected part unchanged.
+The errors of the two wide layers stay large even when the cosine of the whole gradient is high: the estimate keeps the top directions and drops the rest, and the last layer carries about half of $\|g\|^2$.
 
 \begin{table}[H]
 \centering\small
-\caption{Training loss (initial loss $2.25$). ``stopped'': the loss exceeded 20.}\label{tab:train}
-\begin{tabular}{lcccc}
+\caption{Curvature of the network along gradient descent with stepsize $0.3$. $\tr(H)$ is estimated with 200 Gaussian probes and Hessian-vector products, $\lambda_{\max}$ by power iteration. The last columns give the factor of Proposition~\ref{prop:ceiling} at $N=16384$ and the thresholds \eqref{eq:Nstar} of the three layers.}\label{tab:curv}
+\begin{tabular}{lccccccc}
 \toprule
-method & $\eta$ & step 10 & step 30 & step 50\\
+ & loss & $\tr(H)$ & $\lambda_{\max}(H)$ & $\ip{g}{Hg}/\|g\|^2$ & $T$ & $(1+T)/N$ & $N_1^\star$ (layers 1, 2, 3)\\
 \midrule
-exact gradient & 0.3 & 0.147 & 0.0483 & 0.0269\\
-ES & 0.3 & 0.144 & 0.0475 & 0.0265\\
-ES & 0.6 & 0.0652 & 0.0202 & 0.0113\\
-exact gradient & 1.0 & 0.0315 & 0.0106 & 0.0062\\
-ES & 1.2 & 0.0163 & 0.0063 & 0.0038\\
-two-level, $w=1$ & 1.2 & 0.0347 & 0.0111 & 0.0065\\
-two-level, $w=0$ (shrinkage only) & 1.2 & 0.159 & 0.0524 & 0.0322\\
-two-level, $w=0$ (shrinkage only) & 0.3 & 0.466 & 0.206 & 0.135\\
-\midrule
-exact gradient & 2.4 & stopped & & \\
-two-level, $w=0.5$ & 2.4 & stopped & & \\
-ES & 2.4 & 0.720 & $1.2\cdot10^{-5}$ & $7.4\cdot10^{-6}$\\
+\tabin{tab_curv}
 \bottomrule
 \end{tabular}
 \end{table}
-The stepsize $\eta=2.4$ is at the edge of stability. The ES run passes through a loss of $0.72$ and then fits the batch; with one seed we draw no conclusion from the last three rows. For $\eta\le1.2$ the picture is clear: ES is as fast as the exact gradient, and every form of shrinkage is slower.
-
-\textbf{Iterated shrinkage on the same evaluations (\texttt{shrink.py}, \texttt{iterated\_shrink}).} We iterate $G^{(k+1)}=\mathcal S\big(G^{(k)}+\frac1N\sum_j(y_j-\ip{E_j}{G^{(k)}})E_j\big)$ with the noise level re-estimated from the residuals. This is singular value projection [7] with a data-driven threshold. For a $200\times200$ rank-3 gradient ($k(m+n)=1200$), one run each:
 
 \begin{table}[H]
 \centering\small
-\caption{Relative error; ``iterated'' after 5 / 20 / 60 passes.}
-\setlength{\tabcolsep}{4pt}\footnotesize
-\begin{tabular}{lcccc}
+\caption{Training loss after 50 steps (initial loss $2.25$), plain updates $W\leftarrow W-\eta U$, one seed. ``Diverged'': the loss ends above its initial value. $^\dagger$: the loss was above $0.5$ at some step after step 10 and decreased later.}\label{tab:train}
+\begin{tabular}{lccc}
 \toprule
- & $N=1000$ & $N=2000$ & $N=4000$ & $N=8000$\\
+method & $\eta=0.3$ & $\eta=0.6$ & $\eta=1.2$\\
 \midrule
-rank-1 probes, one pass & 0.92 & 0.73 & 0.45 & 0.24\\
-rank-1 probes, iterated & 0.89 / 0.86 / 0.87 & 0.73 / 1.00 / 1.00 & 0.45 / 1.00 / 1.00 & 0.06 / 0.09 / 0.09\\
-rank-8 probes, one pass & 0.80 & 0.47 & 0.29 & 0.15\\
-rank-8 probes, iterated & 0.67 / 0.47 / 0.78 & 0.50 / 0.75 / 0.82 & 0.08 / 0.66 / 0.46 & 0.003 / 0.000 / 0.000\\
+\tabin{tab_train}
 \bottomrule
 \end{tabular}
 \end{table}
-With rank-8 probes and $N=8000$ the gradient is recovered exactly from the same evaluations, as in [3]. Closer to $k(m+n)$ the plain iteration is unstable. We report this as an open point, not as a method.
+Three observations. (i) With $N=16384$, ES and the exact gradient give nearly the same loss at each stepsize (ES is slightly lower). (ii) With fewer probes ES becomes unstable at smaller stepsizes, as the factor $1+(1+T)/N$ predicts, but where it is stable it is not slower than the exact gradient. It is even faster, which the quadratic model does not explain; we did not study this. (iii) Shrinkage is slower than both at every stepsize. Two-level shrinkage with $w=1$ differs from ES only by the reduction of the detected singular values, and this alone raises the loss by $50\%$ to $70\%$.
+
+\textbf{A smaller network (\texttt{exp\_nn.py}).} $64$--$96$--$96$--$10$, $d=16320$, $N=1024$ antithetic pairs with $\sigma=10^{-3}$ (true finite differences). After 300 gradient steps, $N_1^\star=2147$, $2216$, $366$. Algorithm~1 returns zero for layers 1 and 2 and has relative error $0.92$ in layer 3 (Theorem~\ref{thm:risk}: $1.00$, $1.00$, $0.81$).
+
+\section{Use of AI}\label{app:ai}
+We used Claude (Anthropic) throughout: to explore ideas (the reduction to a spiked-matrix model, the sign-flip calibration and the window of Section~\ref{sec:q3} came out of this exchange), to derive and check proofs, to write the code and to draft the text. The question, the earlier draft [D] and notes [N], and the final checking of the mathematics, the code and the citations are ours.
